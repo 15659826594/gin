@@ -1,6 +1,6 @@
 package http
 
-import "github.com/gin-gonic/gin"
+import "gin"
 
 type Request struct {
 	*gin.Context

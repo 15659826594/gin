@@ -2,7 +2,6 @@ package gin
 
 import (
 	"gin/SDK/html/template"
-	"github.com/gin-gonic/gin"
 )
 
 // LoadHTMLFolder loads HTML files identified folder
@@ -12,7 +11,7 @@ func (engine *Engine) LoadHTMLFolder(path string) {
 	right := engine.delims.Right
 	templ := template.Must(template.Wrap(template.New("").Delims(left, right).Funcs(engine.FuncMap)).ParseFolder(path))
 
-	if gin.IsDebugging() {
+	if IsDebugging() {
 		debugPrintLoadTemplate(templ.Template)
 	}
 
