@@ -1,22 +1,30 @@
 package gin
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/md5"
-	"crypto/rand"
+	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"gin/lib/php"
 	"golang.org/x/crypto/ripemd160"
 	"hash"
 	"hash/adler32"
 	"io"
+	"math"
+	"math/big"
+	"math/rand"
 	"os"
+	"path/filepath"
+	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Camel2Snake Camel to underline
@@ -98,11 +106,9 @@ func RandomNozero(len int) string {
 	return ""
 }
 
-/*RandomBuild
- * 能用的随机数生成
+/*RandomBuild 能用的随机数生成
  * @param string $type 类型 alpha/alnum/numeric/nozero/unique/md5/encrypt/sha1
  * @param int    $len  长度
- * @return string
  */
 func RandomBuild(types string, lens int) string {
 	switch types {
@@ -118,7 +124,7 @@ func RandomBuild(types string, lens int) string {
 		case "nozero":
 			pool = "123456789"
 		}
-		return php.Substr(php.StrShuffle(php.StrRepeat(pool, int(php.Ceil(float64(lens)/float64(len(pool)))))), 0, lens)
+		return Substr(StrShuffle(StrRepeat(pool, int(Ceil(float64(lens)/float64(len(pool)))))), 0, lens)
 	case "unique", "md5":
 		return "md5"
 	case "encrypt", "sha1":
@@ -128,13 +134,10 @@ func RandomBuild(types string, lens int) string {
 	return ""
 }
 
-/*RandomUuid
- * 获取全球唯一标识
- * @return string
- */
+// RandomUuid 获取全球唯一标识
 func RandomUuid() string {
 	b := make([]byte, 16)
-	if _, err := io.ReadFull(rand.Reader, b); err != nil {
+	if _, err := io.ReadFull(crand.Reader, b); err != nil {
 		return ""
 	}
 	b[6] = (b[6] & 0x0f) | 0x40
@@ -174,23 +177,14 @@ func Hash(algo string, data string, binary bool) any {
 	return hex.EncodeToString(result)
 }
 
-/*Md5
- * 字符串md5加密
- * @param string $str 要加密的字符串
- * @return string
- */
+// Md5 字符串md5加密
 func Md5(str string) string {
-	data := []byte(str)
-	has := md5.Sum(data)
-	md5str := fmt.Sprintf("%x", has)
-	return md5str
+	hash := md5.New()
+	hash.Write([]byte(str))
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
-/*Base64Encode
- * base64编码
- * @param string $str 要加密的字符串
- * @return string
- */
+// Base64Encode base64编码
 func Base64Encode(str string) string {
 	input := []byte(str)
 	return base64.StdEncoding.EncodeToString(input)
@@ -205,26 +199,7 @@ const (
 	MINUTE = 60
 )
 
-/*DateOffset
- * 计算两个时区间相差的时长,单位为秒
- *
- * $seconds = self::offset('America/Chicago', 'GMT');
- *
- * [!!] A list of time zones that PHP supports can be found at
- * <http://php.net/timezones>.
- *
- * @param string $remote timezone that to find the offset of
- * @param string $local  timezone used as the baseline
- * @param mixed  $now    UNIX timestamp or date string
- * @return  integer
- */
-//func DateOffset(remote string, local string) int64 {
-//	return 1
-//}
-
-/*DateUnixtime
- * 获取一个基于时间偏移的Unix时间戳
- *
+/*DateUnixtime 获取一个基于时间偏移的Unix时间戳
  * @param string $type     时间类型，默认为day，可选minute,hour,day,week,month,quarter,year
  * @param int    $offset   时间偏移量 默认为0，正数表示当前type之后，负数表示当前type之前
  * @param string $position 时间的开始或结束，默认为begin，可选前(begin,start,first,front)，end
@@ -272,7 +247,7 @@ func DateUnixtime(params ...any) (times int64) {
 	} else {
 		minute = now.Minute()
 	}
-	flag := php.InArray(position, []string{"begin", "start", "first", "front"})
+	flag := InArray(position, []string{"begin", "start", "first", "front"})
 	timeMonth := time.Month(month)
 	switch types {
 	case "minute":
@@ -299,12 +274,7 @@ func DateUnixtime(params ...any) (times int64) {
 	return date.Unix()
 }
 
-/*DateDaysInMonth
- * 获取指定年月拥有的天数
- * @param int $month
- * @param int $year
- * @return false|int|string
- */
+// DateDaysInMonth 获取指定年月拥有的天数
 func DateDaysInMonth(month int, year int) int {
 	switch month {
 	case 2:
@@ -318,4 +288,178 @@ func DateDaysInMonth(month int, year int) int {
 	default:
 		return 31
 	}
+}
+
+type Comparable interface {
+	int | byte | ~int16 | ~int32 | ~int64 | ~float32 | ~float64 | string
+}
+
+// Substr substr()
+func Substr(str string, start uint, length int) string {
+	if length < -1 {
+		return str
+	}
+	switch {
+	case length == -1:
+		return str[start:]
+	case length == 0:
+		return ""
+	}
+	end := int(start) + length
+	if end > len(str) {
+		end = len(str)
+	}
+	return str[start:end]
+}
+
+// Strlen strlen()
+func Strlen(str string) int {
+	return len(str)
+}
+
+// StrRepeat str_repeat()
+func StrRepeat(input string, multiplier int) string {
+	return strings.Repeat(input, multiplier)
+}
+
+// StrShuffle str_shuffle()
+func StrShuffle(str string) string {
+	runes := []rune(str)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	s := make([]rune, len(runes))
+	for i, v := range r.Perm(len(runes)) {
+		s[i] = runes[v]
+	}
+	return string(s)
+}
+
+// Ltrim ltrim()
+func Ltrim(str string, characterMask ...string) string {
+	if len(characterMask) == 0 {
+		return strings.TrimLeftFunc(str, unicode.IsSpace)
+	}
+	return strings.TrimLeft(str, characterMask[0])
+}
+
+// MbStrlen mb_strlen()
+func MbStrlen(str string) int {
+	return utf8.RuneCountInString(str)
+}
+
+func SliceMerge[T Comparable](ss ...map[T]any) map[T]any {
+	s := make(map[T]any)
+	for _, v := range ss {
+		for s2, a := range v {
+			s[s2] = a
+		}
+	}
+	return s
+}
+
+// ArrayRand array_rand()
+func ArrayRand(elements []any) []any {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	n := make([]any, len(elements))
+	for i, v := range r.Perm(len(elements)) {
+		n[i] = elements[v]
+	}
+	return n
+}
+
+// Implode implode()
+func Implode(glue string, pieces []string) string {
+	var buf bytes.Buffer
+	l := len(pieces)
+	for _, str := range pieces {
+		buf.WriteString(str)
+		if l--; l > 0 {
+			buf.WriteString(glue)
+		}
+	}
+	return buf.String()
+}
+
+// InArray in_array()
+// haystack supported _type: slice, array or map
+func InArray(needle any, haystack any) bool {
+	val := reflect.ValueOf(haystack)
+	switch val.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < val.Len(); i++ {
+			if reflect.DeepEqual(needle, val.Index(i).Interface()) {
+				return true
+			}
+		}
+	case reflect.Map:
+		for _, k := range val.MapKeys() {
+			if reflect.DeepEqual(needle, val.MapIndex(k).Interface()) {
+				return true
+			}
+		}
+	default:
+		panic("haystack: haystack _type muset be slice, array or map")
+	}
+
+	return false
+}
+
+func MtRand(min, max int) int {
+	if min > max {
+		panic("min: min cannot be greater than max")
+	}
+	// PHP: getrandmax()
+	if int31 := 1<<31 - 1; max > int31 {
+		panic("max: max can not be greater than " + strconv.Itoa(int31))
+	}
+	if min == max {
+		return min
+	}
+	r, _ := crand.Int(crand.Reader, big.NewInt(int64(max+1-min)))
+	return int(r.Int64()) + min
+}
+
+// Ceil ceil()
+func Ceil(value float64) float64 {
+	return math.Ceil(value)
+}
+
+// Pathinfo pathinfo()
+// -1: all; 1: dirname; 2: basename; 4: extension; 8: filename
+// Usage:
+// Pathinfo("/home/go/path/src/php2go/php2go.go", 1|2|4|8)
+func Pathinfo(path string, options int) map[string]string {
+	if options == -1 {
+		options = 1 | 2 | 4 | 8
+	}
+	info := make(map[string]string)
+	if (options & 1) == 1 {
+		info["dirname"] = filepath.Dir(path)
+	}
+	if (options & 2) == 2 {
+		info["basename"] = filepath.Base(path)
+	}
+	if ((options & 4) == 4) || ((options & 8) == 8) {
+		basename := ""
+		if (options & 2) == 2 {
+			basename = info["basename"]
+		} else {
+			basename = filepath.Base(path)
+		}
+		p := strings.LastIndex(basename, ".")
+		filename, extension := "", ""
+		if p > 0 {
+			filename, extension = basename[:p], basename[p+1:]
+		} else if p == -1 {
+			filename = basename
+		} else if p == 0 {
+			extension = basename[p+1:]
+		}
+		if (options & 4) == 4 {
+			info["extension"] = extension
+		}
+		if (options & 8) == 8 {
+			info["filename"] = filename
+		}
+	}
+	return info
 }

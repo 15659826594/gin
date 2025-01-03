@@ -3,7 +3,7 @@ package captcha
 import (
 	"bytes"
 	"fmt"
-	"gin/lib/php"
+	"gin"
 	"github.com/golang/freetype"
 	"image"
 	"image/draw"
@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,7 +22,7 @@ var __DIR__ string
 
 func init() {
 	_, filename, _, _ := runtime.Caller(0)
-	__DIR__ = php.Pathinfo(filename, 1)["dirname"]
+	__DIR__ = gin.Pathinfo(filename, 1)["dirname"]
 }
 
 type captchaOption struct {
@@ -87,7 +88,7 @@ func (that *Captcha) Entry(id string) []byte {
 	draw.Draw(that.im, that.im.Bounds(), bgColor, image.Point{}, draw.Src)
 
 	// 验证码字体随机颜色
-	that.color = imagecolorallocate(php.MtRand(1, 150), php.MtRand(1, 150), php.MtRand(1, 150))
+	that.color = imagecolorallocate(gin.MtRand(1, 150), gin.MtRand(1, 150), gin.MtRand(1, 150))
 
 	if that.config.useImgBg {
 		that.Background()
@@ -121,7 +122,7 @@ func (that *Captcha) Entry(id string) []byte {
 		fontBytes, _ := os.ReadFile(that.config.fontttf)
 		freeFont, _ := freetype.ParseFont(fontBytes)
 
-		code = []any{strconv.Itoa(php.MtRand(1, 9)), "+", strconv.Itoa(php.MtRand(1, 9))}
+		code = []any{strconv.Itoa(gin.MtRand(1, 9)), "+", strconv.Itoa(gin.MtRand(1, 9))}
 		for _, char := range code {
 			codeNx += float64(that.config.fontSize) * 1.5
 			imagettftext(that.im, float64(that.config.fontSize), 0, int(codeNx), int(float64(that.config.fontSize)*1.6), that.color, freeFont, char.(string))
@@ -136,11 +137,11 @@ func (that *Captcha) Entry(id string) []byte {
 					return err
 				}
 				if !info.IsDir() {
-					ttfs = append(ttfs, php.Pathinfo(path, 2)["basename"])
+					ttfs = append(ttfs, gin.Pathinfo(path, 2)["basename"])
 				}
 				return nil
 			})
-			that.config.fontttf = php.ArrayRand(ttfs)[0].(string)
+			that.config.fontttf = gin.ArrayRand(ttfs)[0].(string)
 		}
 		that.config.fontttf = ttfPath + that.config.fontttf
 
@@ -152,19 +153,19 @@ func (that *Captcha) Entry(id string) []byte {
 		if that.config.useZh {
 			// 中文验证码
 			for i := 0; i < that.config.length; i++ {
-				index := php.MtRand(0, php.MbStrlen(that.config.zhSet)-1)
+				index := gin.MtRand(0, gin.MbStrlen(that.config.zhSet)-1)
 				codei := string([]rune(that.config.zhSet)[index : index+1])
-				imagettftext(that.im, float64(that.config.fontSize), float64(php.MtRand(-40, 40)), int(float64(that.config.fontSize)*(float64(i)+1)*1.5), that.config.fontSize+php.MtRand(10, 20), that.color, freeFont, codei)
+				imagettftext(that.im, float64(that.config.fontSize), float64(gin.MtRand(-40, 40)), int(float64(that.config.fontSize)*(float64(i)+1)*1.5), that.config.fontSize+gin.MtRand(10, 20), that.color, freeFont, codei)
 			}
 		} else {
-			for i, strlen := 0, php.Strlen(that.config.codeSet)-1; i < that.config.length; i++ {
-				codei := string(that.config.codeSet[php.MtRand(0, strlen)])
+			for i, strlen := 0, gin.Strlen(that.config.codeSet)-1; i < that.config.length; i++ {
+				codei := string(that.config.codeSet[gin.MtRand(0, strlen)])
 				code = append(code, codei)
-				codeNx += float64(php.MtRand(int(float64(that.config.fontSize)*1.2), int(float64(that.config.fontSize)*1.6)))
-				imagettftext(that.im, float64(that.config.fontSize), float64(php.MtRand(-40, 40)), int(codeNx), int(float64(that.config.fontSize)*1.6), that.color, freeFont, codei)
+				codeNx += float64(gin.MtRand(int(float64(that.config.fontSize)*1.2), int(float64(that.config.fontSize)*1.6)))
+				imagettftext(that.im, float64(that.config.fontSize), float64(gin.MtRand(-40, 40)), int(codeNx), int(float64(that.config.fontSize)*1.6), that.color, freeFont, codei)
 			}
 		}
-		codeStr = that.Authcode(php.Strtoupper(php.Implode("", codeArr)))
+		codeStr = that.Authcode(strings.ToUpper(gin.Implode("", codeArr)))
 	}
 
 	// 保存验证码
@@ -191,9 +192,9 @@ func (that *Captcha) WriteNoise() {
 	codeSet := "2345678abcdefhijkmnpqrstuvwxyz"
 
 	for i := 0; i < 10; i++ {
-		noiseColor := imagecolorallocate(php.MtRand(150, 225), php.MtRand(150, 225), php.MtRand(150, 225))
+		noiseColor := imagecolorallocate(gin.MtRand(150, 225), gin.MtRand(150, 225), gin.MtRand(150, 225))
 		for j := 0; j < 5; j++ {
-			imagestring(that.im, 14, php.MtRand(-10, that.config.imageW), php.MtRand(-10, that.config.imageH), string(codeSet[php.MtRand(0, len(codeSet)-1)]), noiseColor)
+			imagestring(that.im, 14, gin.MtRand(-10, that.config.imageW), gin.MtRand(-10, that.config.imageH), string(codeSet[gin.MtRand(0, len(codeSet)-1)]), noiseColor)
 		}
 	}
 }
@@ -214,15 +215,15 @@ func (that *Captcha) WriteCurve() {
 	var py float64
 	var px float64
 	// 曲线前部分
-	A := php.MtRand(1, int(float64(that.config.imageH)/2))                                       // 振幅
-	b := php.MtRand(-(int(float64(that.config.imageH) / 4)), int(float64(that.config.imageH)/4)) // Y轴方向偏移量
-	f := php.MtRand(-(int(float64(that.config.imageH) / 4)), int(float64(that.config.imageH)/4)) // X轴方向偏移量
-	T := php.MtRand(that.config.imageH, int(float64(that.config.imageW)/2))                      // 周期
+	A := gin.MtRand(1, int(float64(that.config.imageH)/2))                                       // 振幅
+	b := gin.MtRand(-(int(float64(that.config.imageH) / 4)), int(float64(that.config.imageH)/4)) // Y轴方向偏移量
+	f := gin.MtRand(-(int(float64(that.config.imageH) / 4)), int(float64(that.config.imageH)/4)) // X轴方向偏移量
+	T := gin.MtRand(that.config.imageH, int(float64(that.config.imageW)/2))                      // 周期
 
 	w := math.Pi * 2 / float64(T)
 
 	var px1 float64                                                                                      // 曲线横坐标起始位置
-	px2 := float64(php.MtRand(int(float64(that.config.imageW)/2), int(float64(that.config.imageW)*0.8))) // 曲线横坐标结束位置
+	px2 := float64(gin.MtRand(int(float64(that.config.imageW)/2), int(float64(that.config.imageW)*0.8))) // 曲线横坐标结束位置
 
 	for px = px1; px <= px2; px = px + 1 {
 		if w != 0 {
@@ -236,9 +237,9 @@ func (that *Captcha) WriteCurve() {
 	}
 
 	// 曲线后部分
-	A = php.MtRand(1, that.config.imageH/2)                         // 振幅
-	f = php.MtRand(-(that.config.imageH / 4), that.config.imageH/4) // X轴方向偏移量
-	T = php.MtRand(that.config.imageH, that.config.imageW*2)        // 周期
+	A = gin.MtRand(1, that.config.imageH/2)                         // 振幅
+	f = gin.MtRand(-(that.config.imageH / 4), that.config.imageH/4) // X轴方向偏移量
+	T = gin.MtRand(that.config.imageH, that.config.imageW*2)        // 周期
 	w = math.Pi * 2 / float64(T)
 	b = int(py - float64(A)*math.Sin(w*px+float64(f)) - float64(that.config.imageH)/2)
 	px1 = px2
@@ -269,12 +270,12 @@ func (that *Captcha) Background() {
 			return err
 		}
 		if !info.IsDir() {
-			bgs = append(bgs, php.Pathinfo(path, 2)["basename"])
+			bgs = append(bgs, gin.Pathinfo(path, 2)["basename"])
 		}
 		return nil
 	})
 
-	gb := path + php.ArrayRand(bgs)[0].(string)
+	gb := path + gin.ArrayRand(bgs)[0].(string)
 
 	bgFile, _ := os.Open(gb)
 
@@ -294,9 +295,9 @@ func (that *Captcha) Background() {
 //Authcode
 /* 加密验证码 */
 func (that *Captcha) Authcode(str string) string {
-	key := php.Substr(php.Md5(that.config.seKey), 5, 8)
-	str1 := php.Substr(php.Md5(str), 8, 10)
-	return php.Md5(key + str1)
+	key := gin.Substr(gin.Md5(that.config.seKey), 5, 8)
+	str1 := gin.Substr(gin.Md5(str), 8, 10)
+	return gin.Md5(key + str1)
 }
 
 func NewCaptcha(config map[string]any) *Captcha {

@@ -3,8 +3,8 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"gin"
 	"gin/db/connector"
-	"gin/lib/php"
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 )
@@ -57,5 +57,5 @@ func uniqueId(config *mysql.Config) string {
 	if err != nil {
 		return ""
 	}
-	return php.Md5(string(str))
+	return gin.Md5(string(str))
 }
