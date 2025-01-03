@@ -18,14 +18,14 @@ func Run(engine *gin.Engine, config *Config) error {
 		engine,
 		config,
 	}
-	if config.Debug {
-		//自定义显示
+	if config.Debug.Bool() {
 		gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {}
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	if config.DisableConsoleColor {
+
+	if config.DisableConsoleColor.Bool() {
 		gin.DisableConsoleColor()
 	}
 

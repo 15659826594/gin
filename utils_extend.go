@@ -124,7 +124,7 @@ func RandomBuild(types string, lens int) string {
 		case "nozero":
 			pool = "123456789"
 		}
-		return Substr(StrShuffle(StrRepeat(pool, int(Ceil(float64(lens)/float64(len(pool)))))), 0, lens)
+		return Substr(StrShuffle(StrRepeat(pool, int(math.Ceil(float64(lens)/float64(len(pool)))))), 0, lens)
 	case "unique", "md5":
 		return "md5"
 	case "encrypt", "sha1":
@@ -416,11 +416,6 @@ func MtRand(min, max int) int {
 	}
 	r, _ := crand.Int(crand.Reader, big.NewInt(int64(max+1-min)))
 	return int(r.Int64()) + min
-}
-
-// Ceil ceil()
-func Ceil(value float64) float64 {
-	return math.Ceil(value)
 }
 
 // Pathinfo pathinfo()
