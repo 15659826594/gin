@@ -16,7 +16,7 @@ func DebugPrintTable(title []string, fn func(func([]string))) {
 		for i := 0; i < len(content); i++ {
 			_ = table.AddRow(content[i])
 		}
-		fmt.Print(table)
+		fmt.Println(table)
 	} else {
 		fn(func(row []string) {})
 	}
