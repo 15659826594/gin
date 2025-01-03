@@ -13,7 +13,7 @@ type Template struct {
 	*template.Template
 }
 
-func Wrap(t *template.Template) *Template {
+func WrapT(t *template.Template) *Template {
 	return &Template{t}
 }
 

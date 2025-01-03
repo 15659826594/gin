@@ -1,59 +1,43 @@
 package app
 
-import "gin"
+import (
+	"gin"
+	"reflect"
+)
 
 type Config struct {
-	Engine              *gin.Engine
+	Port                int //端口
+	TrustedProxies      []string
 	Debug               bool
 	RouteRule           func(engine *gin.Engine)
-	Methods             []string
-	HTMLFolder          string
-	DisableConsoleColor bool
+	Methods             []string //默认添加的请求
+	HTMLFolder          string   //html存放的目录
+	DisableConsoleColor bool     //控制台颜色
 }
 
-type ConfigOption func(config *Config)
-
-func NewConfig(options ...ConfigOption) *Config {
-	config := &Config{
-		Debug:               false,
-		Methods:             []string{"Get", "POST"},
+func NewConfig(config *Config) *Config {
+	def := &Config{
+		Debug:               true,
+		Port:                8080,
+		TrustedProxies:      []string{"127.0.0.1"},
+		Methods:             []string{"GET", "POST"},
 		HTMLFolder:          "application",
-		DisableConsoleColor: true,
+		DisableConsoleColor: false,
 	}
-	for _, option := range options {
-		option(config)
-	}
-	return config
-}
 
-func WithEngine(c *gin.Engine) ConfigOption {
-	return func(config *Config) {
-		config.Engine = c
+	if config == nil {
+		return def
 	}
-}
 
-func WithDebug(boolean bool) ConfigOption {
-	return func(config *Config) {
-		config.Debug = boolean
-	}
-}
+	defValue := reflect.ValueOf(def).Elem()
 
-func WithRouteRule(fn func(engine *gin.Engine)) ConfigOption {
-	return func(config *Config) {
-		config.RouteRule = fn
+	structValue := reflect.ValueOf(config).Elem()
+	for i, lens := 0, structValue.NumField(); i < lens; i++ {
+		field := structValue.Type().Field(i) // 获取字段类型
+		value := structValue.Field(i)        // 获取字段值
+		if !gin.Empty(value.Interface()) {
+			defValue.FieldByName(field.Name).Set(value)
+		}
 	}
-}
-
-// WithMethods ["GET","POST"]设置默认请求(无注解的action)
-func WithMethods(methods []string) ConfigOption {
-	return func(config *Config) {
-		config.Methods = methods
-	}
-}
-
-// WithDisableConsoleColor 禁止日志的颜色
-func WithDisableConsoleColor(disableConsoleColor bool) ConfigOption {
-	return func(config *Config) {
-		config.DisableConsoleColor = disableConsoleColor
-	}
+	return def
 }

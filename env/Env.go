@@ -5,6 +5,7 @@ import (
 	"gin"
 	"gin/lib/godotenv"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -18,7 +19,8 @@ func defined(name string, args ...string) string {
 	name = strings.ToUpper(strings.ReplaceAll(name, ".", "_"))
 	var val string
 	if len(args) > 0 {
-		val = args[0]
+		//统一分隔符
+		val = filepath.FromSlash(args[0])
 		err := os.Setenv(name, val)
 		if err != nil {
 			return val

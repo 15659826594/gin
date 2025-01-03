@@ -9,7 +9,7 @@ import (
 func (engine *Engine) LoadHTMLFolder(path string) {
 	left := engine.delims.Left
 	right := engine.delims.Right
-	templ := template.Must(template.Wrap(template.New("").Delims(left, right).Funcs(engine.FuncMap)).ParseFolder(path))
+	templ := template.Must(template.WrapT(template.New("").Delims(left, right).Funcs(engine.FuncMap)).ParseFolder(path))
 
 	if IsDebugging() {
 		debugPrintLoadTemplate(templ.Template)

@@ -12,7 +12,7 @@ import (
 
 var (
 	sep      = string(filepath.Separator)
-	basepath = filepath.FromSlash(env.Get("ROOT_PATH"))
+	basePath = env.Get("ROOT_PATH")
 )
 
 type Tree struct {
@@ -24,7 +24,7 @@ func NewTree() *Tree {
 }
 
 func (that *Tree) Module(filename string) *Module {
-	relativePath, _ := filepath.Rel(basepath, filepath.FromSlash(filename))
+	relativePath, _ := filepath.Rel(basePath, filepath.FromSlash(filename))
 	paths := strings.Split(relativePath, sep)
 	if len(paths) < 4 {
 		return nil
