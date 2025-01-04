@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type Template struct {
@@ -40,13 +39,15 @@ func (t *Template) ParseFolder(pattern string) (*Template, error) {
 	return parseFolder(t, pattern)
 }
 
+// 遍历目录查找 html和tpl文件
 func parseFolder(t *Template, folder string) (*Template, error) {
 	tplFiles := map[string]string{}
 	err := filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
-		if !d.IsDir() && strings.HasSuffix(d.Name(), ".html") {
-			name := strings.TrimPrefix(path, folder)
-			name = strings.TrimPrefix(strings.ReplaceAll(name, "\\", "/"), "/")
-			tplFiles[name] = path
+		ext := filepath.Ext(path)
+		if ext == ".html" || ext == ".tpl" || ext == ".tmpl" {
+			//默认路径application
+			name, _ := filepath.Rel("application", path)
+			tplFiles[filepath.ToSlash(name)] = path
 		}
 		return nil
 	})

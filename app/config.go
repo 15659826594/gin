@@ -2,6 +2,8 @@ package app
 
 import (
 	"gin"
+	"html/template"
+	"os"
 	"reflect"
 )
 
@@ -26,23 +28,47 @@ func (t TriState) Bool() bool {
 }
 
 type Config struct {
-	Port                int //端口
+	Port                string //端口
 	Debug               TriState
+	TrustedProxies      []string
+	Static              map[string]string
+	StaticFile          map[string]string
 	RouteRule           func(engine *gin.Engine)
 	Methods             []string //默认添加的请求
 	HTMLFolder          string   //html存放的目录
 	DisableConsoleColor TriState //控制台颜色
-	TrustedProxies      []string
+	FuncMap             template.FuncMap
+}
+
+// 判断根目录下是否存在logo
+func getFaviconIco(def string) string {
+	var path string
+	wd, _ := os.Getwd()
+	path = wd + "/favicon.ico"
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return def
+	} else {
+		return "/favicon.ico"
+	}
 }
 
 func NewConfig(config *Config) *Config {
 	def := &Config{
-		Debug:               True,
-		Port:                8080,
-		TrustedProxies:      []string{"127.0.0.1"}, // 设置 Gin 只信任本机的代理服务器
+		Port:           ":80",
+		Debug:          True,
+		TrustedProxies: []string{"127.0.0.1"}, // 设置 Gin 只信任本机的代理服务器
+		Static: map[string]string{
+			"/assets": "./public/assets",
+		},
+		StaticFile: map[string]string{
+			"/favicon.ico": getFaviconIco("./public/assets/img/favicon.ico"),
+		},
 		Methods:             []string{"GET", "POST"},
 		HTMLFolder:          "application",
 		DisableConsoleColor: False,
+		FuncMap: template.FuncMap{
+			"htmlentities": htmlentities,
+		},
 	}
 
 	if config == nil {

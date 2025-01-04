@@ -57,7 +57,7 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 							c.Set("Controller", controller.Path())
 							c.Set("Action", action.Path())
 						})
-						methodName, uri, err := action.Mapping(level3, controller.NeedAuth(action.Name), defaultMethod)
+						methodName, uri, err := action.Mapping(level3, controller.Initialize, defaultMethod)
 						if err == nil {
 							callback([]string{version.Path(), module.Name, controller.Name, action.Name, uri, strings.Join(methodName, " "), fmt.Sprintf("%s/%s/%s/%s", version.Path(), module.Path(), controller.Path(), uri)})
 						} else if err.Error() == "default" {

@@ -33,10 +33,21 @@ func Run(engine *gin.Engine, config *Config) error {
 		app.Engine = gin.Default()
 		engine = app.Engine
 	}
+	engine.SetFuncMap(config.FuncMap)
+	// 在初始化时。即，在注册任何路由或路由器在套接字中侦听之前
+	engine.LoadHTMLFolder(config.HTMLFolder)
+
+	//静态文件服务
+	for i, s := range config.Static {
+		engine.Static(i, s)
+	}
+	for i, s := range config.StaticFile {
+		engine.StaticFile(i, s)
+	}
+
+	engine.Use(gin.RecoveryExit())
 
 	var err error
-
-	engine.LoadHTMLFolder(config.HTMLFolder)
 
 	err = engine.SetTrustedProxies(config.TrustedProxies)
 	if err != nil {
@@ -50,10 +61,10 @@ func Run(engine *gin.Engine, config *Config) error {
 	route.Builder(engine, config.Methods)
 
 	if !gin.IsDebugging() {
-		fmt.Printf("[GIN-%s] Listening and serving HTTP on %s\n", gin.Mode(), fmt.Sprintf(":%d", config.Port))
+		fmt.Printf("[GIN-%s] Listening and serving HTTP on %s\n", gin.Mode(), config.Port)
 	}
 
-	err = app.Run(fmt.Sprintf(":%d", config.Port))
+	err = app.Run(config.Port)
 	if err != nil {
 		return err
 	}

@@ -92,7 +92,7 @@ type Controller struct {
 }
 
 type IController interface {
-	Initialize() gin.HandlerFunc
+	Initialize(*gin.Context)
 	GetValue() string
 	GetNoNeedLogin() []string
 	GetNoNeedRight() []string
@@ -129,28 +129,6 @@ func (that *Controller) Path() string {
 
 func (that *Controller) IsNil() bool {
 	return that.Name == ""
-}
-
-func inArray(slice []string, target string) bool {
-	if len(slice) == 1 && slice[0] == "*" {
-		return true
-	}
-	for _, item := range slice {
-		if item == target {
-			return true
-		}
-	}
-	return false
-}
-
-// NeedAuth 判断是否需要鉴权, 需要的话返回初始化方法
-func (that *Controller) NeedAuth(action string) gin.HandlerFunc {
-	noNeedLogin := that.GetNoNeedLogin()
-	noNeedRight := that.GetNoNeedRight()
-	if !inArray(noNeedLogin, action) || !inArray(noNeedRight, action) {
-		return that.Initialize()
-	}
-	return nil
 }
 
 type Action struct {
