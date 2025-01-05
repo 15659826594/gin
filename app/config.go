@@ -3,7 +3,6 @@ package app
 import (
 	"gin"
 	"html/template"
-	"os"
 	"reflect"
 )
 
@@ -38,18 +37,6 @@ type Config struct {
 	HTMLFolder          string   //html存放的目录
 	DisableConsoleColor TriState //控制台颜色
 	FuncMap             template.FuncMap
-}
-
-// 判断根目录下是否存在logo
-func getFaviconIco(def string) string {
-	var path string
-	wd, _ := os.Getwd()
-	path = wd + "/favicon.ico"
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return def
-	} else {
-		return "/favicon.ico"
-	}
 }
 
 func NewConfig(config *Config) *Config {
