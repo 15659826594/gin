@@ -7,8 +7,8 @@ func Exit() {
 	panic(errors.New("exit"))
 }
 
-// RecoveryExit 正常中断后续请求
-func RecoveryExit() HandlerFunc {
+// ExceptionHandle 正常中断后续请求
+func ExceptionHandle() HandlerFunc {
 	return func(c *Context) {
 		defer func() {
 			rec := recover()

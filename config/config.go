@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var allowConfigurationFile = []string{".json", ".yml", ".yaml", ".xml"}
+var allowConfigurationFile = encoding.AllowConfigurationFile
 
 var global = map[string]*Scope{
 	"_sys_": newScope(),
@@ -41,6 +41,10 @@ func Load(file string, name string, args ...any) error {
 	return nil
 }
 
+func FileName(file string) string {
+	return strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
+}
+
 /*SearchFiles
  * 搜索配置文件 (".json", ".yml", ".yaml", ".xml")
  * @param  string $folder 文件夹
@@ -49,8 +53,7 @@ func SearchFiles(folder string, callback func(file string, name string, args ...
 	_ = filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
 		ext := filepath.Ext(path)
 		if slices.Contains(allowConfigurationFile, ext) {
-			name := strings.TrimSuffix(filepath.Base(path), ext)
-			callback(path, name, nil)
+			callback(path, FileName(path), nil)
 		}
 		return nil
 	})

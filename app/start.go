@@ -45,7 +45,7 @@ func Run(engine *gin.Engine, config *Config) error {
 		engine.StaticFile(i, s)
 	}
 
-	engine.Use(gin.RecoveryExit())
+	engine.Use(gin.ExceptionHandle())
 
 	var err error
 

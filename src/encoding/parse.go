@@ -10,7 +10,7 @@ import (
 	"slices"
 )
 
-var allowConfigurationFile = []string{".json", ".yml", ".yaml", ".xml"}
+var AllowConfigurationFile = []string{".json", ".yml", ".yaml", ".xml"}
 
 /*Parse
  * 解析配置文件或内容(".json", ".yml", ".yaml", ".xml")
@@ -19,7 +19,7 @@ var allowConfigurationFile = []string{".json", ".yml", ".yaml", ".xml"}
 func Parse(file string) (map[string]any, error) {
 	var data map[string]any
 	ext := filepath.Ext(file)
-	if !slices.Contains(allowConfigurationFile, ext) {
+	if !slices.Contains(AllowConfigurationFile, ext) {
 		return nil, errors.New("not supporting file format: " + ext)
 	}
 	bytes, err := os.ReadFile(file)

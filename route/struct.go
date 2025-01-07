@@ -93,9 +93,10 @@ type Controller struct {
 
 type IController interface {
 	Initialize(*gin.Context)
-	GetValue() string
-	GetNoNeedLogin() []string
-	GetNoNeedRight() []string
+	Value() string
+	NoNeedLogin() []string
+	NoNeedRight() []string
+	ResponseType() string
 	BeforeAction() []gin.HandlerFunc
 	Exception() gin.HandlerFunc
 }
@@ -114,7 +115,7 @@ func NewController(obj any) *Controller {
 	}
 	controller := &Controller{
 		Name:  typeOf.Name(),
-		Value: object.GetValue(),
+		Value: object.Value(),
 	}
 
 	controller.IController = object
