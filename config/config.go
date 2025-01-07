@@ -1,80 +1,29 @@
 package config
 
 import (
-	"encoding/json"
-	"errors"
+	"gin/src/encoding"
 	"io/fs"
-	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
-type IScope interface {
-	Set(string, any)
-	Get(string) (any, bool)
-	GetStringMap(string) map[string]any
-}
-
-type Scope struct {
-	Keys map[string]any
-}
-
-func newScope() *Scope {
-	return &Scope{Keys: make(map[string]any)}
-}
-
-func (s *Scope) Set(key string, value any) {
-	if s.Keys == nil {
-		s.Keys = make(map[string]any)
-	}
-	s.Keys[key] = value
-}
-
-func (s *Scope) Get(key string) (value any, exists bool) {
-	value, exists = s.Keys[key]
-	return
-}
-
-func (s *Scope) GetStringMap(key string) (sm map[string]any) {
-	if val, ok := s.Get(key); ok && val != nil {
-		sm, _ = val.(map[string]any)
-	}
-	return
-}
+var allowConfigurationFile = []string{".json", ".yml", ".yaml", ".xml"}
 
 var global = map[string]*Scope{
 	"_sys_": newScope(),
 }
 
-func getOrCreateScope(name string) *Scope {
-	if val, ok := global[name]; ok {
-		return val
-	}
-	global[name] = newScope()
-	return global[name]
-}
-
 /*Load
- * 载入文件
+ * 载入文件 (".json", ".yml", ".yaml", ".xml")
  * @param  string $file 文件路径
  * @param  string $name key
  * @param  string $args 作用域
  */
 func Load(file string, name string, args ...any) error {
-	var data map[string]any
-	ext := filepath.Ext(file)
-	switch ext {
-	case ".json":
-		tmp, err := os.ReadFile(file)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(tmp, &data)
-		if err != nil {
-			return err
-		}
-	default:
-		return errors.New("unknown file")
+	data, err := encoding.Parse(file)
+	if err != nil {
+		return err
 	}
 	var scope IScope
 	scope = global["_sys_"]
@@ -93,13 +42,13 @@ func Load(file string, name string, args ...any) error {
 }
 
 /*SearchFiles
- * 搜索配置文件
+ * 搜索配置文件 (".json", ".yml", ".yaml", ".xml")
  * @param  string $folder 文件夹
  */
-func SearchFiles(folder string, callback func(string, string, ...any)) {
+func SearchFiles(folder string, callback func(file string, name string, args ...any)) {
 	_ = filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
 		ext := filepath.Ext(path)
-		if ext == ".json" {
+		if slices.Contains(allowConfigurationFile, ext) {
 			name := strings.TrimSuffix(filepath.Base(path), ext)
 			callback(path, name, nil)
 		}

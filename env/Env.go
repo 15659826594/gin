@@ -3,7 +3,7 @@ package env
 import (
 	"fmt"
 	"gin"
-	"gin/lib/godotenv"
+	encodingEnv "gin/src/encoding/env"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -20,7 +20,7 @@ func defined(name string, args ...string) string {
 	var val string
 	if len(args) > 0 {
 		//统一分隔符
-		val = filepath.FromSlash(args[0])
+		val = filepath.ToSlash(args[0])
 		err := os.Setenv(name, val)
 		if err != nil {
 			return val
@@ -55,19 +55,30 @@ func init() {
 	}
 
 	// 加载环境变量配置文件
-	if gin.IsFile(defined("ROOT_PATH") + ".env.sample") {
-		Load(os.Getenv("ROOT_PATH") + ".env.sample")
+	if gin.IsFile(defined("ROOT_PATH") + ".env") {
+		Load(os.Getenv("ROOT_PATH") + ".env")
 	}
 }
 
-func Load(path string) bool {
-	err := godotenv.Load(path)
+/*Load
+ * 载入环境变量文件
+ * @param string $filenames[] 文件名切片
+ * @return bool
+ */
+func Load(filenames ...string) bool {
+	err := encodingEnv.Load(filenames...)
 	if err != nil {
 		return false
 	}
 	return true
 }
 
+/*Get
+ * 设置环境变量
+ * @param string $name 健名
+ * @param string $default 默认值可选
+ * @return string
+ */
 func Get(name string, args ...string) string {
 	result := defined(name)
 	if result == "" && len(args) > 0 {
@@ -76,6 +87,12 @@ func Get(name string, args ...string) string {
 	return result
 }
 
+/*Set
+ * 获取环境变量
+ * @param string $key 健名
+ * @param string $val 健值
+ * @return string
+ */
 func Set(key string, val string) {
 	defined(key, val)
 }

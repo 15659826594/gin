@@ -1,5 +1,12 @@
 package gin
 
+import "errors"
+
+// Exit 中断执行
+func Exit() {
+	panic(errors.New("exit"))
+}
+
 // RecoveryExit 正常中断后续请求
 func RecoveryExit() HandlerFunc {
 	return func(c *Context) {

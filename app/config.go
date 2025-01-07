@@ -48,14 +48,12 @@ func NewConfig(config *Config) *Config {
 			"/assets": "./public/assets",
 		},
 		StaticFile: map[string]string{
-			"/favicon.ico": getFaviconIco("./public/assets/img/favicon.ico"),
+			"/favicon.ico": faviconIco("./public/assets/img/favicon.ico"),
 		},
 		Methods:             []string{"GET", "POST"},
 		HTMLFolder:          "application",
 		DisableConsoleColor: False,
-		FuncMap: template.FuncMap{
-			"htmlentities": htmlentities,
-		},
+		FuncMap:             FuncMap,
 	}
 
 	if config == nil {

@@ -1,8 +1,7 @@
 package gin
 
 import (
-	"errors"
-	"gin/SDK/html/template"
+	"gin/src/html/template"
 )
 
 // LoadHTMLFolder loads HTML files identified folder
@@ -17,9 +16,4 @@ func (engine *Engine) LoadHTMLFolder(path string) {
 	}
 
 	engine.SetHTMLTemplate(templ.Template)
-}
-
-// Exit 中断执行
-func Exit() {
-	panic(errors.New("exit"))
 }

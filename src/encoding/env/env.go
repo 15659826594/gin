@@ -1,4 +1,4 @@
-// Package godotenv is a go port of the ruby dotenv library (https://github.com/bkeepers/dotenv)
+// Package env is a go port of the ruby dotenv library (https://github.com/bkeepers/dotenv)
 //
 // Examples/readme can be found on the GitHub page at https://github.com/joho/godotenv
 //
@@ -8,10 +8,10 @@
 //
 // and then in your go code you can call
 //
-//	godotenv.Load()
+//	env.Load()
 //
 // and all the env vars declared in .env.sample will be available through os.Getenv("SOME_ENV_VAR")
-package godotenv
+package env
 
 import (
 	"bytes"
@@ -45,7 +45,7 @@ func Parse(r io.Reader) (map[string]string, error) {
 //
 // You can otherwise tell it which files to load (there can be more than one) like:
 //
-//	godotenv.Load("fileone", "filetwo")
+//	env.Load("fileone", "filetwo")
 //
 // It's important to note that it WILL NOT OVERRIDE an env variable that already exists - consider the .env.sample file to set dev vars or sensible defaults.
 func Load(filenames ...string) (err error) {
@@ -68,7 +68,7 @@ func Load(filenames ...string) (err error) {
 //
 // You can otherwise tell it which files to load (there can be more than one) like:
 //
-//	godotenv.Overload("fileone", "filetwo")
+//	env.Overload("fileone", "filetwo")
 //
 // It's important to note this WILL OVERRIDE an env variable that already exists - consider the .env.sample file to forcefully set all vars.
 func Overload(filenames ...string) (err error) {
