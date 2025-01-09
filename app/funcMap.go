@@ -6,17 +6,8 @@ import (
 	"html"
 	"html/template"
 	"net/url"
-	"os"
 	"strings"
 )
-
-// 判断根目录下是否存在logo
-func faviconIco(def string) string {
-	if _, err := os.Stat("favicon.ico"); os.IsNotExist(err) {
-		return def
-	}
-	return "favicon.ico"
-}
 
 // FuncMap 自定义模板函数
 var FuncMap = template.FuncMap{
@@ -24,8 +15,8 @@ var FuncMap = template.FuncMap{
 	"date":         utils.Date,
 	"time":         utils.Time,
 	"echo":         utils.Echo,
-	"json_encode":  utils.JsonEncodefunc,
-	"json_decode":  utils.JsonDecodefunc,
+	"json_encode":  utils.JsonEncode,
+	"json_decode":  utils.JsonDecode,
 	"ifor":         utils.Ifor,
 	"url": func(args ...any) string {
 		var targetUrl, vars, currentURL string

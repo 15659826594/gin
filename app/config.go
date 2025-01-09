@@ -53,7 +53,7 @@ func NewConfig(config *Config) *Config {
 			"/assets": "./public/assets",
 		},
 		StaticFile: map[string]string{
-			"/favicon.ico": faviconIco("./public/assets/img/favicon.ico"),
+			"/favicon.ico": utils.Ternary(utils.FileExists("favicon.ico"), "favicon.ico", "public/assets/img/favicon.ico").(string),
 		},
 		ConfigFile:          []string{"application/extra"},
 		RouteRule:           application.Route,

@@ -158,7 +158,7 @@ func (that *Captcha) Entry(id string) []byte {
 				imagettftext(that.im, float64(that.config.fontSize), float64(utils.MtRand(-40, 40)), int(float64(that.config.fontSize)*(float64(i)+1)*1.5), that.config.fontSize+utils.MtRand(10, 20), that.color, freeFont, codei)
 			}
 		} else {
-			for i, strlen := 0, utils.Strlen(that.config.codeSet)-1; i < that.config.length; i++ {
+			for i, strlen := 0, len(that.config.codeSet)-1; i < that.config.length; i++ {
 				codei := string(that.config.codeSet[utils.MtRand(0, strlen)])
 				code = append(code, codei)
 				codeNx += float64(utils.MtRand(int(float64(that.config.fontSize)*1.2), int(float64(that.config.fontSize)*1.6)))

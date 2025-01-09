@@ -1,7 +1,10 @@
 package gin
 
 import (
+	"errors"
 	"fmt"
+	"gin/lib/gotable"
+	"gin/src/html/template"
 	"gin/utils"
 	"net/http"
 	"path"
@@ -11,6 +14,181 @@ import (
 	"strings"
 	"time"
 )
+
+/************************************/
+/**********  	 auth.go 	 ********/
+/************************************/
+
+type IAuth interface {
+	GetUser() any
+	Init() bool
+	Register() bool
+	Login() bool
+	Logout() bool
+	Changepwd() bool
+	Direct() bool
+	Check() bool
+	IsLogin() bool
+	GetToken() string
+	GetUserinfo() map[string]any
+	GetRuleList() any
+	GetRequestUri() string
+	SetRequestUri(string) string
+	GetAllowFields() []string
+	SetAllowFields([]string)
+	Delete(userId int) bool
+	GetEncryptPassword(password string, salt string) string
+	Match(arr []string) bool
+	SetKeeptime(keeptime int64)
+	Render()
+	SetError(err error) IAuth
+	GetError() error
+}
+
+/************************************/
+/**********  	 gin.go 	 ********/
+/************************************/
+
+// LoadHTMLFolder loads HTML files identified folder
+// and associates the result with HTML renderer.
+func (engine *Engine) LoadHTMLFolder(path string, basepath string) {
+	left := engine.delims.Left
+	right := engine.delims.Right
+	templ := template.Must(template.WrapT(template.New("").Delims(left, right).Funcs(engine.FuncMap)).ParseFolder(path, basepath))
+
+	if IsDebugging() {
+		debugPrintLoadTemplate(templ.UnWrapT())
+	}
+
+	engine.SetHTMLTemplate(templ.UnWrapT())
+}
+
+/************************************/
+/**********    context.go	 ********/
+/************************************/
+
+type Req struct {
+	*Context
+}
+
+// Requests 当前的操作名
+func (c *Context) Requests() *Req {
+	return &Req{c}
+}
+
+// Action 当前的操作名
+func (c *Req) Action() string {
+	value, _ := c.Get("Action")
+	return value.(string)
+}
+
+// Controller 当前的控制器名
+func (c *Req) Controller() string {
+	value, _ := c.Get("Controller")
+	return value.(string)
+}
+
+// Module 获取模块名
+func (c *Req) Module() string {
+	value, _ := c.Get("Module")
+	return value.(string)
+}
+
+// Server 获取server参数
+func (c *Req) Server(name string, args ...string) string {
+	value := c.GetHeader(name)
+	if value != "" {
+		return value
+	}
+	if len(args) > 0 {
+		return args[0]
+	}
+	return ""
+}
+
+// Request 获取Requests变量
+func (c *Req) Request(name string, args ...string) string {
+	value := c.PostForm(name)
+	if value != "" {
+		return value
+	}
+	value = c.Query(name)
+	if value != "" {
+		return value
+	}
+	if len(args) > 0 {
+		return args[0]
+	}
+	return ""
+}
+
+// Post 获取post参数
+func (c *Req) Post(name string, args ...string) string {
+	if len(args) > 0 {
+		return c.DefaultPostForm(name, args[0])
+	}
+	return c.PostForm(name)
+}
+
+// Cookie 获取Cookie
+func (c *Req) Cookie(name string) string {
+	if cookie, err := c.Context.Request.Cookie("token"); err == nil {
+		return cookie.Value
+	}
+	return ""
+}
+
+/************************************/
+/**********    debug.go	     ********/
+/************************************/
+
+func DebugPrintTable(title []string, fn func(func([]string))) {
+	if IsDebugging() {
+		var content [][]string
+		content = make([][]string, 0)
+		fn(func(row []string) {
+			content = append(content, row)
+		})
+		table, _ := gotable.Create(title...)
+		for i := 0; i < len(content); i++ {
+			_ = table.AddRow(content[i])
+		}
+		fmt.Println(table)
+	} else {
+		fn(func(row []string) {})
+	}
+}
+
+/************************************/
+/**********    recovery.go	 ********/
+/************************************/
+
+// Exit 中断执行
+func Exit() {
+	panic(errors.New("exit"))
+}
+
+// ExceptionHandle 正常中断后续请求
+func ExceptionHandle() HandlerFunc {
+	return func(c *Context) {
+		defer func() {
+			rec := recover()
+			if rec == nil {
+				return
+			}
+			if err := rec.(error); err.Error() == "exit" {
+				c.Abort()
+			} else {
+				panic(rec)
+			}
+		}()
+		c.Next()
+	}
+}
+
+/************************************/
+/**********response_writer.go********/
+/************************************/
 
 const JSON_UNESCAPED_UNICODE = 256
 

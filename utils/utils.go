@@ -13,7 +13,6 @@ import (
 	"hash/adler32"
 	"io"
 	"math"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -37,25 +36,6 @@ func Snake2Camel(s string) string {
 		snake = strings.ToLower(snake)
 	}
 	return snake
-}
-
-// IsFile is_file()
-func IsFile(filename string) bool {
-	fd, err := os.Stat(filename)
-	if err != nil && os.IsNotExist(err) {
-		return false
-	}
-	return !fd.IsDir()
-}
-
-// IsDir is_dir()
-func IsDir(filename string) (bool, error) {
-	fd, err := os.Stat(filename)
-	if err != nil {
-		return false, err
-	}
-	fm := fd.Mode()
-	return fm.IsDir(), nil
 }
 
 /*RandomAlnum
