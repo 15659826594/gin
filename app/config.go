@@ -1,8 +1,10 @@
 package app
 
 import (
+	"fastadmin/application"
 	"gin"
 	ginConfig "gin/config"
+	"gin/utils"
 	"html/template"
 	"reflect"
 )
@@ -34,7 +36,8 @@ type Config struct {
 	Static              map[string]string
 	StaticFile          map[string]string
 	ConfigFile          []string // 配置文件, 支持文件夹和文件
-	RouteRule           func(engine *gin.Engine)
+	RouteRule           func(*gin.Engine)
+	NoRoute             func(*gin.Context)
 	Methods             []string //默认添加的请求
 	HTMLFolder          string   //html存放的目录
 	DisableConsoleColor TriState //控制台颜色
@@ -52,7 +55,9 @@ func NewConfig(config *Config) *Config {
 		StaticFile: map[string]string{
 			"/favicon.ico": faviconIco("./public/assets/img/favicon.ico"),
 		},
-		ConfigFile:          []string{},
+		ConfigFile:          []string{"application/extra"},
+		RouteRule:           application.Route,
+		NoRoute:             application.NoRoute,
 		Methods:             []string{"GET", "POST"},
 		HTMLFolder:          "application",
 		DisableConsoleColor: False,
@@ -70,13 +75,13 @@ func NewConfig(config *Config) *Config {
 		field := structValue.Type().Field(i) // 获取字段类型
 		value := structValue.Field(i)        // 获取字段值
 
-		if !gin.Empty(value.Interface()) {
+		if !utils.Empty(value.Interface()) {
 			defValue.FieldByName(field.Name).Set(value)
 		}
 	}
 
 	for _, files := range def.ConfigFile {
-		if ok, _ := gin.IsDir(files); ok {
+		if ok, _ := utils.IsDir(files); ok {
 			//载入配置
 			ginConfig.SearchFiles(files, func(file string, name string, args ...any) {
 				_ = ginConfig.Load(file, name, args...)

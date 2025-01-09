@@ -2,6 +2,7 @@ package gin
 
 import (
 	"fmt"
+	"gin/utils"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -88,8 +89,6 @@ func (that *Response) Send(c *Context) {
 	switch that.contentType {
 	case "application/json":
 		c.JSON(that.code, that.data)
-	case "text/html":
-		c.HTML(that.code, "index/view/user/login.html", that.data)
 	case "application/jsonp":
 		c.JSONP(that.code, that.data)
 	case "text/xml":
@@ -313,26 +312,24 @@ func (c *Context) Result(msg string, data any, code int, types string, header ma
 	Exit()
 }
 
-type tempResult struct {
-	template string
-	vars     map[string]any
-	replace  map[string]string
-	config   map[string]string
-}
-
 /*Fetch
  * 解析和获取模板内容 用于输出
  * @param string    $template 模板文件名或者内容
  * @param array     $vars     模板输出变量
  */
 func (c *Context) Fetch(args ...any) {
-	templ := defTempl(2)
-	temp := &tempResult{
+	templ := templDefaultName(2)
+	temp := &(struct {
+		template string
+		vars     map[string]any
+		replace  map[string]string
+		config   map[string]string
+	}{
 		template: templ,
 		vars:     map[string]any{},
 		replace:  map[string]string{},
 		config:   map[string]string{},
-	}
+	})
 	for index, arg := range args {
 		switch index {
 		case 0:
@@ -380,7 +377,7 @@ func (c *Context) Fetch(args ...any) {
 }
 
 // 根据方法名自动匹配模板
-func defTempl(skip int) string {
+func templDefaultName(skip int) string {
 	pc, _, _, _ := runtime.Caller(skip)
 	funcName := runtime.FuncForPC(pc).Name()
 	dir, file := filepath.Split(funcName)
@@ -388,7 +385,7 @@ func defTempl(skip int) string {
 	fileArr := strings.Split(file, ".")
 	fileArr[0] = "view"
 	for i, lens := 1, len(fileArr); i < lens; i++ {
-		fileArr[i] = Camel2Snake(fileArr[i])
+		fileArr[i] = utils.Camel2Snake(fileArr[i])
 	}
 	templ, _ := filepath.Rel("application", strings.Join([]string{strings.Join(dirArr[1:], "/"), strings.Join(fileArr, "/"), ".html"}, ""))
 	return filepath.ToSlash(templ)

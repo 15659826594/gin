@@ -5,6 +5,7 @@ import (
 	"gin"
 	. "gin/annotation"
 	"gin/env"
+	"gin/utils"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -72,7 +73,7 @@ func (that *Version) Path() string {
 	if that.Name == "application" {
 		return ""
 	}
-	return gin.Camel2Snake(that.Name)
+	return utils.Camel2Snake(that.Name)
 }
 
 type Module struct {
@@ -81,7 +82,7 @@ type Module struct {
 }
 
 func (that *Module) Path() string {
-	return gin.Camel2Snake(that.Name)
+	return utils.Camel2Snake(that.Name)
 }
 
 type Controller struct {
@@ -125,7 +126,7 @@ func NewController(obj any) *Controller {
 }
 
 func (that *Controller) Path() string {
-	return gin.Camel2Snake(that.Name)
+	return utils.Camel2Snake(that.Name)
 }
 
 func (that *Controller) IsNil() bool {
@@ -139,7 +140,7 @@ type Action struct {
 }
 
 func (that *Action) Path() string {
-	return gin.Camel2Snake(that.Name)
+	return utils.Camel2Snake(that.Name)
 }
 
 // Mapping (路由组, 初始化方法, 默认请求)

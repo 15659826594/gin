@@ -3,6 +3,7 @@ package annotation
 import (
 	"errors"
 	"gin"
+	"gin/utils"
 	"strings"
 )
 
@@ -24,7 +25,7 @@ func RequestMapping(args ...any) Handler {
 			path = strings.Trim(v, "\"")
 		}
 		//转为驼峰命名法
-		path = gin.Camel2Snake(path)
+		path = utils.Camel2Snake(path)
 
 		if v, ok := arguments["method"]; ok {
 			//去掉空格 , 移除左右" , 逗号拆分成切片

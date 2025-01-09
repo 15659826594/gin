@@ -2,8 +2,8 @@ package env
 
 import (
 	"fmt"
-	"gin"
 	encodingEnv "gin/src/encoding/env"
+	"gin/utils"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -55,7 +55,7 @@ func init() {
 	}
 
 	// 加载环境变量配置文件
-	if gin.IsFile(defined("ROOT_PATH") + ".env") {
+	if utils.IsFile(defined("ROOT_PATH") + ".env") {
 		Load(os.Getenv("ROOT_PATH") + ".env")
 	}
 }

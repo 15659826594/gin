@@ -1,7 +1,6 @@
-package gin
+package utils
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/md5"
 	crand "crypto/rand"
@@ -14,17 +13,10 @@ import (
 	"hash/adler32"
 	"io"
 	"math"
-	"math/big"
-	"math/rand"
 	"os"
-	"path/filepath"
-	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
-	"unicode"
-	"unicode/utf8"
 )
 
 // Camel2Snake Camel to underline
@@ -290,197 +282,28 @@ func DateDaysInMonth(month int, year int) int {
 	}
 }
 
-type Comparable interface {
-	int | byte | ~int16 | ~int32 | ~int64 | ~float32 | ~float64 | string
-}
-
-// Substr substr()
-func Substr(str string, start uint, length int) string {
-	if length < -1 {
-		return str
+// Ifor 三目运算符增强版
+func Ifor(condition any, param any, optional ...any) any {
+	var trueVal, falseVal any
+	if len(optional) > 0 {
+		trueVal = param
+		falseVal = optional[0]
+	} else {
+		trueVal = condition
+		falseVal = param
 	}
-	switch {
-	case length == -1:
-		return str[start:]
-	case length == 0:
-		return ""
-	}
-	end := int(start) + length
-	if end > len(str) {
-		end = len(str)
-	}
-	return str[start:end]
-}
-
-// Strlen strlen()
-func Strlen(str string) int {
-	return len(str)
-}
-
-// StrRepeat str_repeat()
-func StrRepeat(input string, multiplier int) string {
-	return strings.Repeat(input, multiplier)
-}
-
-// StrShuffle str_shuffle()
-func StrShuffle(str string) string {
-	runes := []rune(str)
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	s := make([]rune, len(runes))
-	for i, v := range r.Perm(len(runes)) {
-		s[i] = runes[v]
-	}
-	return string(s)
-}
-
-// Ltrim ltrim()
-func Ltrim(str string, characterMask ...string) string {
-	if len(characterMask) == 0 {
-		return strings.TrimLeftFunc(str, unicode.IsSpace)
-	}
-	return strings.TrimLeft(str, characterMask[0])
-}
-
-// MbStrlen mb_strlen()
-func MbStrlen(str string) int {
-	return utf8.RuneCountInString(str)
-}
-
-func SliceMerge[T Comparable](ss ...map[T]any) map[T]any {
-	s := make(map[T]any)
-	for _, v := range ss {
-		for s2, a := range v {
-			s[s2] = a
-		}
-	}
-	return s
-}
-
-// ArrayRand array_rand()
-func ArrayRand(elements []any) []any {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	n := make([]any, len(elements))
-	for i, v := range r.Perm(len(elements)) {
-		n[i] = elements[v]
-	}
-	return n
-}
-
-// Implode implode()
-func Implode(glue string, pieces []string) string {
-	var buf bytes.Buffer
-	l := len(pieces)
-	for _, str := range pieces {
-		buf.WriteString(str)
-		if l--; l > 0 {
-			buf.WriteString(glue)
-		}
-	}
-	return buf.String()
-}
-
-// InArray in_array()
-// haystack supported _type: slice, array or map
-func InArray(needle any, haystack any) bool {
-	val := reflect.ValueOf(haystack)
-	switch val.Kind() {
-	case reflect.Slice, reflect.Array:
-		for i := 0; i < val.Len(); i++ {
-			if reflect.DeepEqual(needle, val.Index(i).Interface()) {
-				return true
-			}
-		}
-	case reflect.Map:
-		for _, k := range val.MapKeys() {
-			if reflect.DeepEqual(needle, val.MapIndex(k).Interface()) {
-				return true
-			}
+	switch c := condition.(type) {
+	case bool:
+		if c {
+			return trueVal
+		} else {
+			return falseVal
 		}
 	default:
-		panic("haystack: haystack _type muset be slice, array or map")
-	}
-
-	return false
-}
-
-func MtRand(min, max int) int {
-	if min > max {
-		panic("min: min cannot be greater than max")
-	}
-	// PHP: getrandmax()
-	if int31 := 1<<31 - 1; max > int31 {
-		panic("max: max can not be greater than " + strconv.Itoa(int31))
-	}
-	if min == max {
-		return min
-	}
-	r, _ := crand.Int(crand.Reader, big.NewInt(int64(max+1-min)))
-	return int(r.Int64()) + min
-}
-
-// Pathinfo pathinfo()
-// -1: all; 1: dirname; 2: basename; 4: extension; 8: filename
-// Usage:
-// Pathinfo("/home/go/path/src/php2go/php2go.go", 1|2|4|8)
-func Pathinfo(path string, options int) map[string]string {
-	if options == -1 {
-		options = 1 | 2 | 4 | 8
-	}
-	info := make(map[string]string)
-	if (options & 1) == 1 {
-		info["dirname"] = filepath.Dir(path)
-	}
-	if (options & 2) == 2 {
-		info["basename"] = filepath.Base(path)
-	}
-	if ((options & 4) == 4) || ((options & 8) == 8) {
-		basename := ""
-		if (options & 2) == 2 {
-			basename = info["basename"]
+		if !Empty(condition) {
+			return trueVal
 		} else {
-			basename = filepath.Base(path)
-		}
-		p := strings.LastIndex(basename, ".")
-		filename, extension := "", ""
-		if p > 0 {
-			filename, extension = basename[:p], basename[p+1:]
-		} else if p == -1 {
-			filename = basename
-		} else if p == 0 {
-			extension = basename[p+1:]
-		}
-		if (options & 4) == 4 {
-			info["extension"] = extension
-		}
-		if (options & 8) == 8 {
-			info["filename"] = filename
+			return falseVal
 		}
 	}
-	return info
-}
-
-// Empty empty()
-func Empty(val any) bool {
-	if val == nil {
-		return true
-	}
-	v := reflect.ValueOf(val)
-	switch v.Kind() {
-	case reflect.String, reflect.Array:
-		return v.Len() == 0
-	case reflect.Map, reflect.Slice:
-		return v.Len() == 0 || v.IsNil()
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
-	case reflect.Interface, reflect.Ptr:
-		return v.IsNil()
-	}
-
-	return reflect.DeepEqual(val, reflect.Zero(v.Type()).Interface())
 }

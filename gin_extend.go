@@ -6,14 +6,14 @@ import (
 
 // LoadHTMLFolder loads HTML files identified folder
 // and associates the result with HTML renderer.
-func (engine *Engine) LoadHTMLFolder(path string) {
+func (engine *Engine) LoadHTMLFolder(path string, basepath string) {
 	left := engine.delims.Left
 	right := engine.delims.Right
-	templ := template.Must(template.WrapT(template.New("").Delims(left, right).Funcs(engine.FuncMap)).ParseFolder(path))
+	templ := template.Must(template.WrapT(template.New("").Delims(left, right).Funcs(engine.FuncMap)).ParseFolder(path, basepath))
 
 	if IsDebugging() {
-		debugPrintLoadTemplate(templ.Template)
+		debugPrintLoadTemplate(templ.UnWrapT())
 	}
 
-	engine.SetHTMLTemplate(templ.Template)
+	engine.SetHTMLTemplate(templ.UnWrapT())
 }

@@ -12,12 +12,18 @@ type Application struct {
 	*Config
 }
 
-func Run(engine *gin.Engine, config *Config) error {
+func create(engine *gin.Engine, config *Config) *Application {
 	config = NewConfig(config)
-	app := &Application{
+	return &Application{
 		engine,
 		config,
 	}
+}
+
+func (app *Application) Init() *Application {
+	config := app.Config
+	engine := app.Engine
+
 	if config.Debug.Bool() {
 		gin.DebugPrintRouteFunc = func(httpMethod, absolutePath, handlerName string, nuHandlers int) {}
 		gin.SetMode(gin.DebugMode)
@@ -35,7 +41,7 @@ func Run(engine *gin.Engine, config *Config) error {
 	}
 	engine.SetFuncMap(config.FuncMap)
 	// 在初始化时。即，在注册任何路由或路由器在套接字中侦听之前
-	engine.LoadHTMLFolder(config.HTMLFolder)
+	engine.LoadHTMLFolder(config.HTMLFolder, "application")
 
 	//静态文件服务
 	for i, s := range config.Static {
@@ -45,29 +51,39 @@ func Run(engine *gin.Engine, config *Config) error {
 		engine.StaticFile(i, s)
 	}
 
-	engine.Use(gin.ExceptionHandle())
+	_ = engine.SetTrustedProxies(config.TrustedProxies)
 
-	var err error
-
-	err = engine.SetTrustedProxies(config.TrustedProxies)
-	if err != nil {
-		return err
-	}
-
+	//自定义路由
 	if config.RouteRule != nil {
 		config.RouteRule(app.Engine)
+	}
+	//404页面
+	if config.NoRoute != nil {
+		engine.NoRoute(config.NoRoute)
 	}
 
 	route.Builder(engine, config.Methods)
 
-	if !gin.IsDebugging() {
-		fmt.Printf("[GIN-%s] Listening and serving HTTP on %s\n", gin.Mode(), config.Port)
-	}
+	return app
+}
 
-	err = app.Run(config.Port)
+func New(engine *gin.Engine, config *Config) *Application {
+	app := create(engine, config)
+	return app.Init()
+}
+
+func (app *Application) Run() error {
+	var err error
+	if !gin.IsDebugging() {
+		fmt.Println(fmt.Sprintf("[GIN-%s] Listening and serving HTTP on %s", gin.Mode(), app.Config.Port))
+	}
+	err = app.Engine.Run(app.Config.Port)
 	if err != nil {
 		return err
 	}
-
 	return nil
+}
+
+func Run(engine *gin.Engine, config *Config) error {
+	return create(engine, config).Init().Run()
 }
