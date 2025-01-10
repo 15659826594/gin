@@ -5,6 +5,7 @@ import (
 	"gin"
 	_ "gin/annotation"
 	"gin/route"
+	"path/filepath"
 )
 
 type Application struct {
@@ -41,7 +42,11 @@ func (app *Application) Init() *Application {
 	}
 	engine.SetFuncMap(config.FuncMap)
 	// 在初始化时。即，在注册任何路由或路由器在套接字中侦听之前
-	engine.LoadHTMLFolder(config.HTMLFolder, "application")
+	// LoadHTMLFolder包含模板内的define
+	engine.LoadHTMLFolder(config.HTMLFolder, func(path string) string {
+		path, _ = filepath.Rel("application", path)
+		return filepath.ToSlash(path)
+	})
 
 	//静态文件服务
 	for i, s := range config.Static {

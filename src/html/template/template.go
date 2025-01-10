@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
+	"slices"
 )
 
 type Template struct {
@@ -40,24 +40,24 @@ func Must(t *Template, err error) *Template {
 	return t
 }
 
-func ParseFolder(path string, basepath string) (*Template, error) {
-	return parseFolder(nil, path, basepath)
+func ParseFolder(path string, rename func(path string) string) (*Template, error) {
+	return parseFolder(nil, path, rename)
 }
 
-func (t *Template) ParseFolder(path string, basepath string) (*Template, error) {
-	return parseFolder(t, path, basepath)
+func (t *Template) ParseFolder(path string, rename func(path string) string) (*Template, error) {
+	return parseFolder(t, path, rename)
 }
 
 // 遍历目录查找 html和tpl文件
-func parseFolder(t *Template, folder string, basepath string) (*Template, error) {
+func parseFolder(t *Template, folder string, rename func(path string) string) (*Template, error) {
 	tplFiles := map[string]string{}
-	//匹配模板文件
-	var pattern = regexp.MustCompile(`(?i)\.(html|tpl|tmpl)$`)
-
 	err := filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
-		if pattern.MatchString(path) {
-			name, _ := filepath.Rel(basepath, path)
-			tplFiles[filepath.ToSlash(name)] = path
+		if slices.Contains([]string{".html", ".tpl", ".tmpl"}, filepath.Ext(path)) {
+			if rename == nil {
+				tplFiles[filepath.ToSlash(path)] = path
+			} else {
+				tplFiles[rename(path)] = path
+			}
 		}
 		return nil
 	})
