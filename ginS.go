@@ -43,36 +43,36 @@ func (c *Context) IsAjax() bool {
 	return c.Request.Header.Get("X-Requested-With") == "XMLHttpRequest"
 }
 
-type Req struct {
-	*Context
+type RequsetS struct {
+	context *Context
 }
 
 // Requests 当前的操作名
-func (c *Context) Requests() *Req {
-	return &Req{c}
+func (c *Context) Requests() *RequsetS {
+	return &RequsetS{context: c}
 }
 
 // Action 当前的操作名
-func (c *Req) Action() string {
-	value, _ := c.Get("Action")
+func (c *RequsetS) Action() string {
+	value, _ := c.context.Get("Action")
 	return value.(string)
 }
 
 // Controller 当前的控制器名
-func (c *Req) Controller() string {
-	value, _ := c.Get("Controller")
+func (c *RequsetS) Controller() string {
+	value, _ := c.context.Get("Controller")
 	return value.(string)
 }
 
 // Module 获取模块名
-func (c *Req) Module() string {
-	value, _ := c.Get("Module")
+func (c *RequsetS) Module() string {
+	value, _ := c.context.Get("Module")
 	return value.(string)
 }
 
 // Server 获取server参数
-func (c *Req) Server(name string, args ...string) string {
-	value := c.GetHeader(name)
+func (c *RequsetS) Server(name string, args ...string) string {
+	value := c.context.GetHeader(name)
 	if value != "" {
 		return value
 	}
@@ -83,12 +83,12 @@ func (c *Req) Server(name string, args ...string) string {
 }
 
 // Request 获取Requests变量
-func (c *Req) Request(name string, args ...string) string {
-	value := c.PostForm(name)
+func (c *RequsetS) Request(name string, args ...string) string {
+	value := c.context.PostForm(name)
 	if value != "" {
 		return value
 	}
-	value = c.Query(name)
+	value = c.context.Query(name)
 	if value != "" {
 		return value
 	}
@@ -99,16 +99,16 @@ func (c *Req) Request(name string, args ...string) string {
 }
 
 // Post 获取post参数
-func (c *Req) Post(name string, args ...string) string {
+func (c *RequsetS) Post(name string, args ...string) string {
 	if len(args) > 0 {
-		return c.DefaultPostForm(name, args[0])
+		return c.context.DefaultPostForm(name, args[0])
 	}
-	return c.PostForm(name)
+	return c.context.PostForm(name)
 }
 
 // Cookie 获取Cookie
-func (c *Req) Cookie(name string) string {
-	if cookie, err := c.Context.Request.Cookie("token"); err == nil {
+func (c *RequsetS) Cookie(name string) string {
+	if cookie, err := c.context.Request.Cookie("token"); err == nil {
 		return cookie.Value
 	}
 	return ""
@@ -385,30 +385,30 @@ func (j *Jump) getResponseType() string {
  * @param array  $header 发送的 Header 信息
  */
 func (j *Jump) Error(args ...any) {
-	//result := &Result{
-	//	Wait: 3,
-	//}
-	//types := j.getResponseType()
-	//for index, arg := range args {
-	//	switch index {
-	//	case 0:
-	//		result.Msg = arg.(string)
-	//	case 1:
-	//		result.Url = arg.(string)
-	//	case 2:
-	//		result.Data = arg
-	//	case 3:
-	//		result.Wait = arg.(int)
-	//	case 4:
-	//		result.Header = arg.(map[string]string)
-	//	}
-	//}
-	//
-	//if strings.ToLower(types) == "html" {
-	//
-	//}
-	//
+	result := map[string]any{
+		"wait": 3,
+	}
+	types := j.getResponseType()
+	for index, arg := range args {
+		switch index {
+		case 0:
+			result["Msg"] = arg.(string)
+		case 1:
+			result["Url"] = arg.(string)
+		case 2:
+			result["Data"] = arg
+		case 3:
+			result["wait"] = arg.(int)
+		case 4:
+			result["Header"] = arg.(map[string]string)
+		}
+	}
+
+	if strings.ToLower(types) == "html" {
+
+	}
+
 	//resp := Create(result, types, 200).Header(result.Header)
 	//resp.Send(j.Context)
-	//Exit()
+	Exit()
 }

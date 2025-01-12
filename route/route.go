@@ -63,8 +63,7 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 						} else if err.Error() == "default" {
 							callback([]string{version.Path(), module.Name, controller.Name, action.Name, uri, fmt.Sprintf("def(%s)", strings.Join(methodName, " ")), fmt.Sprintf("%s/%s/%s/%s", version.Path(), module.Path(), controller.Path(), action.Path())})
 						} else if err.Error() == "invalid" {
-							msg := fmt.Sprintf("%s: %s %s %s %s", err.Error(), version.Name, module.Name, controller.Name, action.Name)
-							fmt.Printf("\033[1;31;40m%s\033[0m\n", msg)
+							callback([]string{version.Path(), module.Name, controller.Name, action.Name, uri, "error", "invalid"})
 						}
 					}
 				}

@@ -2,6 +2,7 @@ package app
 
 import (
 	"gin/config"
+	"gin/lang"
 	"gin/utils"
 	"html"
 	"html/template"
@@ -38,8 +39,15 @@ var FuncMap = template.FuncMap{
 		}
 		return Url(targetUrl, vars, currentURL).String()
 	},
-	"__": func(s string) string { // i18n 国际化翻译
-		return s
+	"__": func(str string, args ...string) string { // i18n 国际化翻译
+		language := "zh-cn"
+		for index, arg := range args {
+			switch index {
+			case 0:
+				language = arg
+			}
+		}
+		return lang.I18n(str, nil, language)
 	},
 	"default": func(arg any, arg1 any) any {
 		if utils.Empty(arg) {

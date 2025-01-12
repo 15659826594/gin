@@ -33,7 +33,7 @@ func Load(file string, name string, args ...any) error {
 			if s, ok := arg.(IScope); ok {
 				scope = s
 			} else if s1, ok1 := arg.(string); ok1 {
-				scope = getOrCreateScope(s1)
+				scope = findOrCreateScope(s1)
 			}
 		}
 	}
@@ -77,7 +77,7 @@ func Get(args ...any) any {
 			if s, ok := arg.(IScope); ok {
 				scope = s
 			} else if s1, ok1 := arg.(string); ok1 {
-				scope = getOrCreateScope(s1)
+				scope = findOrCreateScope(s1)
 			}
 		}
 	}
@@ -130,7 +130,7 @@ func Set(name string, value any, args ...any) {
 			if s, ok := arg.(IScope); ok {
 				scope = s
 			} else if s1, ok1 := arg.(string); ok1 {
-				scope = getOrCreateScope(s1)
+				scope = findOrCreateScope(s1)
 			}
 		}
 	}

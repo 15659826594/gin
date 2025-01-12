@@ -40,7 +40,7 @@ func (s *Scope) GetStringMap(key string) (sm map[string]any) {
 	return
 }
 
-func getOrCreateScope(name string) *Scope {
+func findOrCreateScope(name string) *Scope {
 	if val, ok := global[name]; ok {
 		return val
 	}
