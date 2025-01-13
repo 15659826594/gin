@@ -43,6 +43,18 @@ func (c *Context) IsAjax() bool {
 	return c.Request.Header.Get("X-Requested-With") == "XMLHttpRequest"
 }
 
+// Langset 当前的语言
+func (c *Context) Langset(args ...string) string {
+	language := "zh-cn"
+	for index, arg := range args {
+		switch index {
+		case 0:
+			language = arg
+		}
+	}
+	return language + "." + strings.Join(strings.Split(utils.Camel2Snake(c.GetString("Request.URL")), "/"), ".")
+}
+
 type RequsetS struct {
 	context *Context
 }
@@ -53,21 +65,30 @@ func (c *Context) Requests() *RequsetS {
 }
 
 // Action 当前的操作名
-func (c *RequsetS) Action() string {
-	value, _ := c.context.Get("Action")
-	return value.(string)
+func (c *RequsetS) Action(toSnake bool) string {
+	arr := strings.Split(c.context.GetString("Request.URL"), "/")
+	if toSnake {
+		return utils.Camel2Snake(arr[2])
+	}
+	return arr[2]
 }
 
 // Controller 当前的控制器名
-func (c *RequsetS) Controller() string {
-	value, _ := c.context.Get("Controller")
-	return value.(string)
+func (c *RequsetS) Controller(toSnake bool) string {
+	arr := strings.Split(c.context.GetString("Request.URL"), "/")
+	if toSnake {
+		return utils.Camel2Snake(arr[1])
+	}
+	return arr[1]
 }
 
 // Module 获取模块名
-func (c *RequsetS) Module() string {
-	value, _ := c.context.Get("Module")
-	return value.(string)
+func (c *RequsetS) Module(toSnake bool) string {
+	arr := strings.Split(c.context.GetString("Request.URL"), "/")
+	if toSnake {
+		return utils.Camel2Snake(arr[0])
+	}
+	return arr[0]
 }
 
 // Server 获取server参数
@@ -112,6 +133,25 @@ func (c *RequsetS) Cookie(name string) string {
 		return cookie.Value
 	}
 	return ""
+}
+
+/*Url 生成
+ * @param string        $url 路由地址(可以是相对路径)
+ * @param string|array  $vars 变量
+ * @param bool|string   $base base路径
+ * @return string
+ */
+func (c *RequsetS) Url(url string, vars any, base any) string {
+	var baseUrl string
+	switch tmp := base.(type) {
+	case string:
+		baseUrl = tmp
+	case bool:
+		if tmp {
+			baseUrl = c.context.Request.URL.String()
+		}
+	}
+	return utils.URL(url, vars, baseUrl)
 }
 
 /************************************/
@@ -369,11 +409,16 @@ func (c *Context) Jump() *Jump {
 }
 
 func (j *Jump) getResponseType() string {
+	var ret any
 	if j.context.IsAjax() {
-		return config.Get("default_ajax_return").(string)
+		ret = config.Get("default_ajax_return")
 	} else {
-		return config.Get("default_return_type").(string)
+		ret = config.Get("default_return_type")
 	}
+	if v, ok := ret.(string); ok {
+		return v
+	}
+	return "html"
 }
 
 /*Error
@@ -407,8 +452,6 @@ func (j *Jump) Error(args ...any) {
 	if strings.ToLower(types) == "html" {
 
 	}
-
-	//resp := Create(result, types, 200).Header(result.Header)
-	//resp.Send(j.Context)
+	j.context.HTML(http.StatusOK, config.Get("dispatch_error_tmpl").(string), result["Data"])
 	Exit()
 }

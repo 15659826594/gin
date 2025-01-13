@@ -98,7 +98,11 @@ func I18n(name string, vars map[string]string, lang string) string {
 		lang = "zh-cn"
 	}
 	arr := strings.Split(lang, ".")
-	chains := make([]map[string]string, 0, len(arr)+1)
+	lens := len(arr)
+	if vars != nil {
+		lens += 1
+	}
+	chains := make([]map[string]string, 0, lens)
 	createScopeChains(arr, &chains)
 	if vars != nil {
 		chains = append(chains, vars)

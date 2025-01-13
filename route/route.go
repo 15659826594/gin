@@ -53,9 +53,7 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 					level3.Use(append([]gin.HandlerFunc{controller.Exception()}, controller.BeforeAction()...)...)
 					for _, action := range controller.Actions {
 						level3.Use(func(c *gin.Context) {
-							c.Set("Module", module.Path())
-							c.Set("Controller", controller.Path())
-							c.Set("Action", action.Path())
+							c.Set("Request.URL", strings.Join([]string{module.Name, controller.Name, action.Name}, "/"))
 						})
 						methodName, uri, err := action.Mapping(level3, controller.Initialize, defaultMethod)
 						if err == nil {

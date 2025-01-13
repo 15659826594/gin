@@ -82,8 +82,14 @@ func createScopeChains(lang []string, slicePtr *[]map[string]string) {
 	var tmp *Scope
 	for _, s := range lang {
 		if tmp == nil {
+			if _, ok := global[s]; !ok {
+				return
+			}
 			tmp = global[s]
 		} else {
+			if _, ok := tmp.Childs[s]; !ok {
+				return
+			}
 			tmp = tmp.Childs[s]
 		}
 		tmpSlice := map[string]string{}

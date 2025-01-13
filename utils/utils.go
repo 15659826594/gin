@@ -9,19 +9,70 @@ import (
 	"golang.org/x/crypto/ripemd160"
 	"hash"
 	"hash/adler32"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
 )
 
-// Camel2Snake Camel to underline
+/*URL
+ * 生成 支持路由反射
+ * @param string            				url 	路由地址
+ * @param string|map[string]string          vars 	路由参数
+ * @param string    						base 	例如:http://example.com/
+ * @return string
+ */
+func URL(toUrl string, vars any, base string) string {
+	var baseURL *url.URL
+	toURL, _ := url.Parse(toUrl)
+	if base != "" {
+		baseURL, _ = url.Parse(base)
+	}
+	if baseURL != nil {
+		toURL.Scheme = baseURL.Scheme
+		toURL.Opaque = baseURL.Opaque
+		toURL.User = baseURL.User
+		toURL.Host = baseURL.Host
+		if !strings.HasPrefix(toURL.Path, "/") {
+			toURL.Path, _ = url.JoinPath(baseURL.Path, "../"+toURL.Path)
+		}
+	}
+	switch tmp := vars.(type) {
+	case string:
+		if tmp != "" {
+			search := toURL.Query()
+			arr := strings.Split(tmp, "&")
+			for _, v := range arr {
+				kv := strings.Split(v, "=")
+				if len(kv) == 2 {
+					search.Add(kv[0], kv[1])
+				} else if len(kv) == 1 {
+					search.Add(kv[0], "")
+				}
+			}
+			toURL.RawQuery = search.Encode()
+		}
+	case map[string]string:
+		if tmp != nil {
+			search := toURL.Query()
+			for k, v := range tmp {
+				search.Set(k, v)
+			}
+			toURL.RawQuery = search.Encode()
+		}
+	}
+	toURL.Path, _ = url.JoinPath(toURL.Path)
+	return toURL.String()
+}
+
+// Camel2Snake 驼峰转下划线命名
 func Camel2Snake(camel string) string {
 	snake := regexp.MustCompile("([a-z0-9])([A-Z]+)").ReplaceAllString(camel, "${1}_${2}")
 	snake = strings.ToLower(snake)
 	return snake
 }
 
-// Snake2Camel Underline to camel
+// Snake2Camel 下划线转驼峰命名
 func Snake2Camel(s string) string {
 	re := regexp.MustCompile(`_([a-z])`)
 	snake := re.ReplaceAllStringFunc(s, func(m string) string {
@@ -58,7 +109,7 @@ func Hash(algo string, data string, binary bool) any {
 	case "adler32":
 		m = adler32.New()
 	}
-	_, _ = m.Write([]byte(dataByte))
+	_, _ = m.Write(dataByte)
 	result := m.Sum(nil)
 	if binary {
 		return result
@@ -68,9 +119,9 @@ func Hash(algo string, data string, binary bool) any {
 
 // Md5 字符串md5加密
 func Md5(str string) string {
-	hash := md5.New()
-	hash.Write([]byte(str))
-	return hex.EncodeToString(hash.Sum(nil))
+	hashs := md5.New()
+	hashs.Write([]byte(str))
+	return hex.EncodeToString(hashs.Sum(nil))
 }
 
 // Base64Encode base64编码
