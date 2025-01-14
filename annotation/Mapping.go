@@ -1,33 +1,25 @@
 package annotation
 
-import "gin"
+type Handler func(string, map[string]string) ([]string, string)
 
-type Handler func(*gin.RouterGroup, []gin.HandlerFunc, map[string]string, string) ([]string, string, error)
+var RouteMapping = map[string]Handler{}
 
-type mapping struct {
-	Map map[string]func(...any) Handler
+func Register(name string, fn Handler) {
+	RouteMapping[name] = fn
 }
 
-var Mapping = &mapping{
-	Map: make(map[string]func(...any) Handler),
-}
-
-func (that *mapping) Register(name string, fn func(...any) Handler) {
-	that.Map[name] = fn
-}
-
-func (that *mapping) Get(name string) func(...any) Handler {
-	if that.Map[name] == nil {
-		return nil
+func Get(name string) Handler {
+	if fn, ok := RouteMapping[name]; ok {
+		return fn
 	}
-	return that.Map[name]
+	return nil
 }
 
 func init() {
-	Mapping.Register("Request", RequestMapping)
-	Mapping.Register("Post", PostMapping)
-	Mapping.Register("Get", GetMapping)
-	Mapping.Register("Put", PutMapping)
-	Mapping.Register("Delete", DeleteMapping)
-	Mapping.Register("Patch", PatchMapping)
+	Register("Request", RequestMapping)
+	Register("Post", PostMapping)
+	Register("Get", GetMapping)
+	Register("Put", PutMapping)
+	Register("Delete", DeleteMapping)
+	Register("Patch", PatchMapping)
 }

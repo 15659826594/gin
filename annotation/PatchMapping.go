@@ -1,5 +1,5 @@
 package annotation
 
-func PatchMapping(args ...any) Handler {
-	return RequestMapping([]string{"PATCH"})
+func PatchMapping(httpMethod string, attr map[string]string) ([]string, string) {
+	return RequestMapping("PATCH", attr)
 }

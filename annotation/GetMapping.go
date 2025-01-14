@@ -1,5 +1,5 @@
 package annotation
 
-func GetMapping(args ...any) Handler {
-	return RequestMapping([]string{"GET"})
+func GetMapping(httpMethod string, attr map[string]string) ([]string, string) {
+	return RequestMapping("GET", attr)
 }

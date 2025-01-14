@@ -155,13 +155,13 @@ func IsFile(filename string) bool {
 }
 
 // IsDir is_dir()
-func IsDir(filename string) (bool, error) {
+func IsDir(filename string) bool {
 	fd, err := os.Stat(filename)
 	if err != nil {
-		return false, err
+		return false
 	}
 	fm := fd.Mode()
-	return fm.IsDir(), nil
+	return fm.IsDir()
 }
 
 // Empty empty()

@@ -1,5 +1,5 @@
 package annotation
 
-func DeleteMapping(args ...any) Handler {
-	return RequestMapping([]string{"DELETE"})
+func DeleteMapping(httpMethod string, attr map[string]string) ([]string, string) {
+	return RequestMapping("DELETE", attr)
 }

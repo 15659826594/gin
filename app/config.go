@@ -81,7 +81,7 @@ func NewConfig(config *Config) *Config {
 	}
 
 	for _, files := range def.ConfigFile {
-		if ok, _ := utils.IsDir(files); ok {
+		if utils.IsDir(files) {
 			//载入配置
 			ginConfig.SearchFiles(files, func(file string, name string, args ...any) {
 				_ = ginConfig.Load(file, name, args...)

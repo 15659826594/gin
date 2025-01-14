@@ -1,5 +1,5 @@
 package annotation
 
-func PostMapping(args ...any) Handler {
-	return RequestMapping([]string{"POST"})
+func PostMapping(httpMethod string, attr map[string]string) ([]string, string) {
+	return RequestMapping("POST", attr)
 }

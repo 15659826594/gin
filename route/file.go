@@ -74,10 +74,6 @@ var commaReg = regexp.MustCompile(`(?:[^,"]+|"[^"]*")+`)              // 逗号�
 
 // ResolveAnnotation 解析注解
 func (that AstFile) ResolveAnnotation(collection []string) []Annotation {
-	if collection == nil {
-		return nil
-	}
-
 	var annotations []Annotation
 	for _, text := range collection {
 		//注解的方法名

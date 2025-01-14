@@ -1,5 +1,5 @@
 package annotation
 
-func PutMapping(args ...any) Handler {
-	return RequestMapping([]string{"PUT"})
+func PutMapping(httpMethod string, attr map[string]string) ([]string, string) {
+	return RequestMapping("PUT", attr)
 }

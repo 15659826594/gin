@@ -1,9 +1,7 @@
 package route
 
 import (
-	"errors"
 	"gin"
-	. "gin/annotation"
 	"gin/env"
 	"gin/utils"
 	"path/filepath"
@@ -105,7 +103,7 @@ type IController interface {
 func NewController(obj any) *Controller {
 	object, ok := obj.(IController)
 	if !ok {
-		return (*Controller)(nil)
+		return nil
 	}
 	typeOf := reflect.TypeOf(obj)
 	valueOf := reflect.ValueOf(obj)
@@ -114,23 +112,26 @@ func NewController(obj any) *Controller {
 		typeOf = typeOf.Elem()
 		valueOf = valueOf.Elem()
 	}
+
 	controller := &Controller{
-		Name:  typeOf.Name(),
-		Value: object.Value(),
+		object, typeOf.Name(), object.Value(), []*Action{},
+	}
+	//提取结构体中的方法
+	for i, lens := 0, valueOf.NumMethod(); i < lens; i++ {
+		methodReflect := valueOf.Method(i)
+		if fn, isgc := methodReflect.Interface().(func(*gin.Context)); isgc {
+			controller.Actions = append(controller.Actions, &Action{
+				Name:    valueOf.Type().Method(i).Name,
+				Handler: fn,
+			})
+		}
 	}
 
-	controller.IController = object
-
-	controller.Actions = collectAction(valueOf)
 	return controller
 }
 
 func (that *Controller) Path() string {
 	return utils.Camel2Snake(that.Name)
-}
-
-func (that *Controller) IsNil() bool {
-	return that.Name == ""
 }
 
 type Action struct {
@@ -141,42 +142,6 @@ type Action struct {
 
 func (that *Action) Path() string {
 	return utils.Camel2Snake(that.Name)
-}
-
-// Mapping (路由组, 初始化方法, 默认请求)
-func (that *Action) Mapping(group *gin.RouterGroup, init gin.HandlerFunc, def []string) ([]string, string, error) {
-	var ginHandlers []gin.HandlerFunc
-	if init != nil {
-		ginHandlers = append(ginHandlers, init)
-	}
-	ginHandlers = append(ginHandlers, that.Handler)
-	for _, annotation := range that.Annotations {
-		fn := Mapping.Get(annotation.Name)
-		if fn != nil {
-			return fn()(group, ginHandlers, annotation.Attributes, that.Path())
-		}
-	}
-	i, s, err := RequestMapping(def)(group, ginHandlers, nil, that.Path())
-	if err != nil {
-		return nil, "", err
-	}
-	return i, s, errors.New("default")
-}
-
-// collectAction 提取结构体的方法
-func collectAction(cValueOf reflect.Value) []*Action {
-	var actions []*Action
-	for i, lens := 0, cValueOf.NumMethod(); i < lens; i++ {
-		methodReflect := cValueOf.Method(i)
-		fn, ok := methodReflect.Interface().(func(*gin.Context))
-		if ok {
-			actions = append(actions, &Action{
-				Name:    cValueOf.Type().Method(i).Name,
-				Handler: fn,
-			})
-		}
-	}
-	return actions
 }
 
 type Annotation struct {
