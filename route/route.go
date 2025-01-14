@@ -68,4 +68,5 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 			}
 		}
 	})
+	Router = nil
 }

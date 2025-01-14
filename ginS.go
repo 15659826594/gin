@@ -7,6 +7,7 @@ import (
 	"gin/lib/gotable"
 	"gin/src/html/template"
 	"gin/utils"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -53,6 +54,11 @@ func (c *Context) Langset(args ...string) string {
 		}
 	}
 	return language + "." + strings.Join(strings.Split(utils.Camel2Snake(c.GetString("Request.URL")), "/"), ".")
+}
+
+// AcceptLang 当前网页语言
+func (c *Context) AcceptLang(args ...string) string {
+	return c.Request.Header.Get("Accept-Language")
 }
 
 type RequsetS struct {
@@ -437,21 +443,44 @@ func (j *Jump) Error(args ...any) {
 	for index, arg := range args {
 		switch index {
 		case 0:
-			result["Msg"] = arg.(string)
+			result["msg"] = arg.(string)
 		case 1:
-			result["Url"] = arg.(string)
+			result["url"] = arg.(string)
 		case 2:
-			result["Data"] = arg
+			result["data"] = arg
 		case 3:
 			result["wait"] = arg.(int)
 		case 4:
-			result["Header"] = arg.(map[string]string)
+			result["header"] = arg.(map[string]string)
 		}
 	}
+	if tmp, ok := result["url"].(string); ok && tmp != "" {
+		if !(strings.HasPrefix(tmp, "/") || strings.HasPrefix(tmp, ".")) {
+			tmp = "/" + tmp
+		}
+		result["url"] = tmp
+	}
+
+	requset := RequsetS{context: j.context}
 
 	if strings.ToLower(types) == "html" {
-
+		j.context.HTML(http.StatusOK, config.Get("dispatch_error_tmpl").(string), gin.H{
+			"lang": "zh-cn." + requset.Module(true),
+			"code": 0,
+			"msg":  result["msg"],
+			"url":  result["url"],
+			"wait": result["wait"],
+		})
+	} else if strings.ToLower(types) == "json" {
+		j.context.JSON(http.StatusOK, gin.H{
+			"lang": "zh-cn." + requset.Module(true),
+			"code": 0,
+			"msg":  result["msg"],
+			"time": time.Now().Unix(),
+			"data": result["data"],
+			"url":  result["url"],
+			"wait": result["wait"],
+		})
 	}
-	j.context.HTML(http.StatusOK, config.Get("dispatch_error_tmpl").(string), result["Data"])
 	Exit()
 }

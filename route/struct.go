@@ -13,7 +13,7 @@ import (
 
 var (
 	sep      = string(filepath.Separator)
-	basePath = env.Get("ROOT_PATH")
+	basePath = env.Getenv("ROOT_PATH")
 )
 
 type Tree struct {

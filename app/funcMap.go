@@ -11,14 +11,22 @@ import (
 
 // FuncMap 自定义模板函数
 var FuncMap = template.FuncMap{
+	//把一些字符转换为 HTML 实体
 	"htmlentities": html.EscapeString,
-	"date":         utils.Date,
-	"time":         utils.Time,
-	"echo":         utils.Echo,
-	"json_encode":  utils.JsonEncode,
-	"json_decode":  utils.JsonDecode,
-	"ifor":         utils.Ifor,
-	"ThinkConfig":  config.Get,
+	//把 HTML 实体转换为字符
+	"html_entity_decode": func(str string) template.HTML {
+		return template.HTML(str)
+	},
+	"date":        utils.Date,
+	"time":        utils.Time,
+	"echo":        utils.Echo,
+	"json_encode": utils.JsonEncode,
+	"json_decode": utils.JsonDecode,
+	"ifor":        utils.Ifor,
+	"ThinkConfig": config.Get,
+	"bool": func(arg any) bool {
+		return !utils.Empty(arg)
+	},
 	"__": func(str string, args ...string) string {
 		language := "zh-cn"
 		for index, arg := range args {
@@ -42,7 +50,7 @@ var FuncMap = template.FuncMap{
 				}
 			}
 		}
-		if !strings.HasPrefix(toUrl, "/") || !strings.HasPrefix(toUrl, ".") {
+		if !(strings.HasPrefix(toUrl, "/") || strings.HasPrefix(toUrl, ".")) {
 			toUrl = "/" + toUrl
 		}
 		return utils.URL(toUrl, vars, base)
