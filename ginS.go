@@ -57,7 +57,7 @@ func (c *Context) Langset(args ...string) string {
 }
 
 // AcceptLang 当前网页语言
-func (c *Context) AcceptLang(args ...string) string {
+func (c *Context) AcceptLang() string {
 	return c.Request.Header.Get("Accept-Language")
 }
 
@@ -135,7 +135,7 @@ func (c *RequsetS) Post(name string, args ...string) string {
 
 // Cookie 获取Cookie
 func (c *RequsetS) Cookie(name string) string {
-	if cookie, err := c.context.Request.Cookie("token"); err == nil {
+	if cookie, err := c.context.Request.Cookie(name); err == nil {
 		return cookie.Value
 	}
 	return ""
