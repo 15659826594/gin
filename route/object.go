@@ -12,6 +12,7 @@ import (
 var (
 	sep      = string(filepath.Separator)
 	basePath = env.Getenv("ROOT_PATH")
+	osGetwd  = filepath.Dir(filepath.Dir(basePath))
 )
 
 type Tree struct {
@@ -31,7 +32,7 @@ func (that *Tree) Module(filename string) *Module {
 	versionName := paths[0]
 	moduleName := paths[1]
 	version := that.GetVersion(versionName)
-	return version.GetModule(moduleName)
+	return version.GetModule(moduleName, filename)
 }
 
 func (that *Tree) GetVersion(name string) *Version {
@@ -53,15 +54,18 @@ type Version struct {
 	Modules []*Module
 }
 
-func (that *Version) GetModule(name string) *Module {
+func (that *Version) GetModule(name string, filename string) *Module {
 	for _, v := range that.Modules {
 		if v.Name == name {
 			return v
 		}
 	}
+	absolutePath := strings.TrimSuffix(filename, filepath.Ext(filename))
+	absolutePath, _ = filepath.Rel(osGetwd, absolutePath)
 	module := &Module{
-		Name:        name,
-		Controllers: []*Controller{},
+		Name:         name,
+		Controllers:  []*Controller{},
+		AbsolutePath: filepath.ToSlash(absolutePath),
 	}
 	that.Modules = append(that.Modules, module)
 	return module
@@ -75,8 +79,9 @@ func (that *Version) Path() string {
 }
 
 type Module struct {
-	Name        string
-	Controllers []*Controller
+	Name         string
+	Controllers  []*Controller
+	AbsolutePath string
 }
 
 func (that *Module) Path() string {
