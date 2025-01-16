@@ -13,7 +13,7 @@ import (
 var Router *Tree
 
 // Register 注册路由规则
-func Register(cStruct IController) *Tree {
+func Register(cStruct gin.IController) *Tree {
 	if Router == nil {
 		Router = NewTree()
 	}
@@ -46,41 +46,52 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 	}
 
 	for _, version := range Router.Versions {
+		// http://localhost:8080/api/user/index 当版本为application时忽略模块
+		// http://localhost:8080/v2/api/user/index
 		level1 := engine.Group(version.Path())
 		for _, module := range version.Modules {
 			level2 := level1.Group(module.Path())
 			for _, controller := range module.Controllers {
-				level3 := level2.Group(controller.Path())
+				var level3 *gin.RouterGroup
+				// http://localhost:8080/user/index  斜杠开头 , 忽略上级路由
+				if strings.HasPrefix(controller.Path(), "/") {
+					level3 = engine.Group(controller.Path())
+				} else {
+					level3 = level2.Group(controller.Path())
+				}
 				//异常捕获 | 前置操作(多个)
 				handlersChain := append([]gin.HandlerFunc{controller.Exception()}, controller.BeforeAction()...)
-				handlersChain = append(handlersChain, controller.Initialize)
+				//将控制器的方法挂在到上下文
+				handlersChain = append(handlersChain, func(c *gin.Context) {
+					c.Set("__jump__", controller.IJump)
+					c.Set("__view__", controller.IView)
+				})
 				level3.Use(handlersChain...)
 
 				for _, action := range controller.Actions {
 					//方法的位置
-					handlerName := strings.Join([]string{module.AbsolutePath, controller.Name, action.Name}, ".")
-					level3.Use(func(c *gin.Context) {
-						c.Set("Request.URL", strings.Join([]string{module.Name, controller.Name, action.Name}, "/"))
-					})
+					handlerName := fmt.Sprintf("%s.%s.%s", module.AbsolutePath, controller.Name, action.Name)
 					flag := false
 					for _, anno := range action.Annotations {
 						myfun := annotation.Get(anno.Name)
 						if myfun != nil {
+							tmpRG := level3
 							httpMethods, uri := myfun(anno.Name, anno.Attributes)
 							if uri == "" {
 								uri = action.Path()
-								createURL(level3, httpMethods, uri, controller.Initialize, handlerName)
-							} else if strings.HasPrefix(uri, "/") {
-								absoluteGroup := engine.Group("")
-								absoluteGroup.Use(handlersChain...)
-								createURL(absoluteGroup, httpMethods, uri, controller.Initialize, handlerName)
 							}
+							// http://localhost:8080/index  斜杠开头 , 忽略上级路由
+							if strings.HasPrefix(uri, "/") {
+								tmpRG = engine.Group("")
+								tmpRG.Use(handlersChain...)
+							}
+							createURL(tmpRG, httpMethods, uri, []gin.HandlerFunc{controller.Initialize, action.Handler}, handlerName)
 							flag = true
 						}
 					}
 					//如果没有路由注解则自动生成方法
 					if !flag {
-						createURL(level3, defaultMethod, action.Path(), controller.Initialize, handlerName)
+						createURL(level3, defaultMethod, action.Path(), []gin.HandlerFunc{controller.Initialize, action.Handler}, handlerName)
 					}
 				}
 			}
@@ -88,14 +99,23 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 	}
 }
 
-func createURL(group *gin.RouterGroup, httpMethods []string, url string, handler gin.HandlerFunc, handlerName string) {
+func createURL(group *gin.RouterGroup, httpMethods []string, url string, handler []gin.HandlerFunc, handlerName string) {
+	//执行顺序 设置handlerName, 控制器Init方法, action方法
+	handlers := append([]gin.HandlerFunc{func(c *gin.Context) {
+		c.Set("__handler_name__", handlerName)
+	}}, handler...)
+
 	for _, method := range httpMethods {
 		if method == "Any" {
-			group.Any(url).Use(handler)
+			group.Any(url, handlers...)
 			continue
 		}
-		group.Handle(method, url).Use(handler)
+		group.Handle(method, url, handlers...)
 	}
-	url = filepath.ToSlash(path.Clean(group.BasePath() + "/" + url))
-	fmt.Printf("[GIN-debug]  %-25s --> %s [ %s ]\n", url, handlerName, strings.Join(httpMethods, " "))
+	if gin.IsDebugging() {
+		httpMethod := strings.Join(httpMethods, " ")
+		absolutePath := filepath.ToSlash(path.Clean(group.BasePath() + "/" + url))
+		nuHandlers := len(group.Handlers) + len(handlers)
+		fmt.Printf("[GIN-debug] %-10s %-25s --> %s (%d handlers)\n", httpMethod, absolutePath, handlerName, nuHandlers)
+	}
 }

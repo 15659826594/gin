@@ -225,7 +225,7 @@ func (c *Context) AbortWithError(code int, err error) *Error {
 }
 
 /************************************/
-/********* ERROR MANAGEMENT *********/
+/********* Error MANAGEMENT *********/
 /************************************/
 
 // Error attaches an error to the current context. The error is pushed to a list of errors.

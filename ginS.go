@@ -2,11 +2,37 @@ package gin
 
 import (
 	"errors"
-	"gin/config"
+	"fmt"
 	"gin/src/html/template"
 	"gin/utils"
+	"net/http"
+	"path/filepath"
+	"reflect"
 	"strings"
 )
+
+type IController interface {
+	Initialize(*Context)
+	Value() string
+	NoNeedLogin() []string
+	NoNeedRight() []string
+	ResponseType() string
+	BeforeAction() []HandlerFunc
+	Exception() HandlerFunc
+}
+
+type IJump interface {
+	Success(*Context, ...any)
+	Error(*Context, ...any)
+	Result(context *Context, data any, code int, msg string, types string, header map[string]string)
+	Redirect(context *Context, url string, params map[string]string, code int, with map[string]string)
+	GetResponseType(*Context) string
+}
+
+type IView interface {
+	Assign(*Context, string, ...any)
+	Fetch(*Context, ...any)
+}
 
 /************************************/
 /**********  	 gin.go 	 ********/
@@ -30,25 +56,40 @@ func (engine *Engine) LoadHTMLFolder(path string, rename func(name string) strin
 /**********    context.go	 ********/
 /************************************/
 
+func (c *Context) IsGet() bool {
+	return c.Request.Method == http.MethodGet
+}
+
+func (c *Context) IsPost() bool {
+	return c.Request.Method == http.MethodPost
+}
+
+func (c *Context) IsPut() bool {
+	return c.Request.Method == http.MethodPut
+}
+
+func (c *Context) IsDelete() bool {
+	return c.Request.Method == http.MethodDelete
+}
+
+func (c *Context) IsHead() bool {
+	return c.Request.Method == http.MethodHead
+}
+
+func (c *Context) IsPatch() bool {
+	return c.Request.Method == http.MethodPatch
+}
+
+func (c *Context) IsOptions() bool {
+	return c.Request.Method == http.MethodOptions
+}
+
 func (c *Context) IsAjax() bool {
 	return c.Request.Header.Get("X-Requested-With") == "XMLHttpRequest"
 }
 
-func (c *Context) getResponseType() string {
-	var ret any
-	if c.IsAjax() {
-		ret = config.Get("default_ajax_return")
-	} else {
-		ret = config.Get("default_return_type")
-	}
-	if v, ok := ret.(string); ok {
-		return v
-	}
-	return "html"
-}
-
 // Langset 当前的语言
-func (c *Context) Langset(args ...string) string {
+func (c *Context) Langset(withPath bool, args ...string) string {
 	language := "zh-cn"
 	for index, arg := range args {
 		switch index {
@@ -56,48 +97,73 @@ func (c *Context) Langset(args ...string) string {
 			language = arg
 		}
 	}
-	return language + "." + strings.Join(strings.Split(utils.Camel2Snake(c.GetString("Request.URL")), "/"), ".")
-}
-
-// AcceptLang 当前网页语言
-func (c *Context) AcceptLang() string {
-	return c.Request.Header.Get("Accept-Language")
+	if withPath {
+		_, module, controller, action, err := separateHandlerName(c.GetString("__handler_name__"))
+		if err == nil {
+			return utils.Camel2Snake(strings.Join([]string{language, module, controller, action}, "."))
+		}
+	}
+	return language
 }
 
 type RequsetS struct {
 	context *Context
 }
 
-// Requests 当前的操作名
 func (c *Context) Requests() *RequsetS {
 	return &RequsetS{context: c}
 }
 
-// Action 当前的操作名
-func (c *RequsetS) Action(toSnake bool) string {
-	arr := strings.Split(c.context.GetString("Request.URL"), "/")
-	if toSnake {
-		return utils.Camel2Snake(arr[2])
-	}
-	return arr[2]
-}
-
-// Controller 当前的控制器名
-func (c *RequsetS) Controller(toSnake bool) string {
-	arr := strings.Split(c.context.GetString("Request.URL"), "/")
-	if toSnake {
-		return utils.Camel2Snake(arr[1])
-	}
-	return arr[1]
-}
-
-// Module 获取模块名
+// Module 获取当前的模块名
 func (c *RequsetS) Module(toSnake bool) string {
-	arr := strings.Split(c.context.GetString("Request.URL"), "/")
-	if toSnake {
-		return utils.Camel2Snake(arr[0])
+	_, module, _, _, err := separateHandlerName(c.context.GetString("__handler_name__"))
+	if err != nil {
+		return ""
 	}
-	return arr[0]
+	if toSnake {
+		return utils.Camel2Snake(module)
+	}
+	return module
+}
+
+// Controller 获取当前的控制器名
+func (c *RequsetS) Controller(toSnake bool) string {
+	_, _, controller, _, err := separateHandlerName(c.context.GetString("__handler_name__"))
+	if err != nil {
+		return ""
+	}
+	if toSnake {
+		return utils.Camel2Snake(controller)
+	}
+	return controller
+}
+
+// Action 获取当前的操作名
+func (c *RequsetS) Action(toSnake bool) string {
+	_, _, _, action, err := separateHandlerName(c.context.GetString("__handler_name__"))
+	if err != nil {
+		return ""
+	}
+	if toSnake {
+		return utils.Camel2Snake(action)
+	}
+	return action
+}
+
+func separateHandlerName(handlerName string) (version string, module string, controller string, action string, err error) {
+	if handlerName == "" {
+		err = errors.New("undefined handlerName")
+		return
+	}
+	arr := strings.Split(handlerName, "/")
+	lens := len(arr)
+	version = arr[lens-3]
+	module = arr[lens-2]
+	filego := strings.Split(arr[lens-1], ".")
+	lens = len(filego)
+	controller = filego[lens-2]
+	action = filego[lens-1]
+	return
 }
 
 // Server 获取server参数
@@ -190,172 +256,237 @@ func ExceptionHandle() HandlerFunc {
 /**********response_writer.go********/
 /************************************/
 
-//// Success 操作成功返回的数据
-///**
-// * @param string $msg    提示信息
-// * @param mixed  $data   要返回的数据
-// * @param int    $code   错误码，默认为1
-// * @param string $type   输出类型
-// * @param array  $header 发送的 Header 信息
-// */
-//func (c *Context) Success(args ...any) {
-//	resp := new(Result)
-//	for index, arg := range args {
-//		switch index {
-//		case 0:
-//			resp.Msg = arg.(string)
-//		case 1:
-//			resp.Data = arg
-//		case 2:
-//			if arg != nil {
-//				resp.Code = arg.(int)
-//			} else {
-//				resp.Code = 1
-//			}
-//		case 3:
-//			resp.Type = arg.(string)
-//		case 4:
-//			resp.Header = arg.(map[string]string)
-//		}
-//	}
-//	c.Result(resp.Msg, resp.Data, resp.Code, resp.Type, resp.Header)
-//}
-//
-///*Fail 操作失败返回的数据
-// * @param string $msg    提示信息
-// * @param mixed  $data   要返回的数据
-// * @param int    $code   错误码，默认为0
-// * @param string $type   输出类型
-// * @param array  $header 发送的 Header 信息
-// */
-//func (c *Context) Fail(args ...any) {
-//	resp := new(Result)
-//	for index, arg := range args {
-//		switch index {
-//		case 0:
-//			resp.Msg = arg.(string)
-//		case 1:
-//			resp.Data = arg
-//		case 2:
-//			if arg != nil {
-//				resp.Code = arg.(int)
-//			} else {
-//				resp.Code = 0
-//			}
-//		case 3:
-//			resp.Type = arg.(string)
-//		case 4:
-//			resp.Header = arg.(map[string]string)
-//		}
-//	}
-//	c.Result(resp.Msg, resp.Data, resp.Code, resp.Type, resp.Header)
-//}
-//
-//// Result 返回封装后的 API 数据到客户端
-//func (c *Context) Result(msg string, data any, code int, types string, header map[string]string) {
-//	result := Result{
-//		Code: code,
-//		Msg:  msg,
-//		Time: time.Now().Unix(),
-//		Data: data,
-//	}
-//	// 如果未设置类型则使用默认类型判断
-//	if types == "" {
-//		if value, ok := c.Request.Header["Response-Type"]; ok {
-//			types = value[0]
-//		}
-//	}
-//
-//	if statusCode, ok := header["statuscode"]; ok {
-//		code, _ = strconv.Atoi(statusCode)
-//		delete(header, "statuscode")
-//	} else {
-//		//未设置状态码,根据code值判断
-//		if code >= 1000 || code < 200 {
-//			code = 200
-//		}
-//	}
-//	resp := Create(result, types, code).Header(header)
-//	resp.Send(c)
-//	Exit()
-//}
-//
-///*Fetch
-// * 解析和获取模板内容 用于输出
-// * @param string    $template 模板文件名或者内容
-// * @param array     $vars     模板输出变量
-// */
-//func (c *Context) Fetch(args ...any) {
-//	templ := defaultTemplName(2)
-//	temp := &(struct {
-//		template string
-//		vars     map[string]any
-//		replace  map[string]string
-//		config   map[string]string
-//	}{
-//		template: templ,
-//		vars:     map[string]any{},
-//		replace:  map[string]string{},
-//		config:   map[string]string{},
-//	})
-//	for index, arg := range args {
-//		switch index {
-//		case 0:
-//			if v, ok := arg.(string); ok {
-//				if v == "" {
-//					continue
-//				} else if strings.HasPrefix(v, "/") {
-//					temp.template = path.Clean(v)[1:]
-//				} else if !strings.HasPrefix(v, ".") {
-//					temp.template = filepath.Dir(temp.template) + "/" + v
-//				} else if strings.HasPrefix(v, "./") {
-//					temp.template = filepath.Dir(temp.template) + "/" + filepath.Base(v)
-//				} else {
-//					temp.template = filepath.Clean(temp.template + "/" + v)
-//				}
-//			}
-//		case 1:
-//			if v, ok := arg.(map[string]any); ok {
-//				temp.vars = v
-//			}
-//		case 2:
-//			if v, ok := arg.(map[string]string); ok {
-//				temp.config = v
-//			}
-//		case 3:
-//			if v, ok := arg.(map[string]string); ok {
-//				temp.replace = v
-//			}
-//		}
-//	}
-//	//如果没有后缀补上.html
-//	if !slices.Contains([]string{".html", ".tpl", ".tmpl"}, filepath.Ext(temp.template)) {
-//		temp.template += ".html"
-//	}
-//	assignData := c.GetStringMap("GlobalAssign")
-//	if assignData != nil {
-//		for k, v := range assignData {
-//			temp.vars[k] = v
-//		}
-//	}
-//	temp.template = filepath.ToSlash(temp.template)
-//	c.HTML(http.StatusOK, temp.template, (H)(temp.vars))
-//	Exit()
-//}
-//
-///*Assign
-// * 模板变量赋值
-// * @access protected
-// * @param  mixed $name  要显示的模板变量
-// * @param  mixed $value 变量的值
-// * @return $this
-// */
-//func (c *Context) Assign(name string, value any) *Context {
-//	assignData := c.GetStringMap("GlobalAssign")
-//	if assignData == nil {
-//		assignData = make(map[string]interface{})
-//	}
-//	assignData[name] = value
-//	c.Set("GlobalAssign", assignData)
-//	return c
-//}
+type Result struct {
+	Code   int               `json:"code"`
+	Msg    string            `json:"msg"`
+	Time   int64             `json:"time"`
+	Data   any               `json:"data"`
+	Url    string            `json:"-"`
+	Wait   int               `json:"-"`
+	Type   string            `json:"-"`
+	Header map[string]string `json:"-"`
+}
+
+func (r *Result) ToStringMap(all bool) map[string]any {
+	kind := reflect.ValueOf(r).Kind()
+	if !(kind == reflect.Struct || kind == reflect.Ptr) {
+		return nil
+	}
+	typeOf := reflect.TypeOf(r)
+	valueOf := reflect.ValueOf(r)
+	if typeOf.Kind() == reflect.Ptr {
+		typeOf = typeOf.Elem()
+		valueOf = valueOf.Elem()
+	}
+	lens := typeOf.NumField()
+	kv := make(map[string]any, lens)
+	for i := 0; i < lens; i++ {
+		field := typeOf.Field(i)
+		fieldValue := valueOf.Field(i)
+		tag := field.Tag.Get("json")
+		if all {
+			kv[utils.Camel2Snake(field.Name)] = fieldValue.Interface()
+		} else {
+			if tag != "-" {
+				kv[tag] = fieldValue.Interface()
+			}
+		}
+	}
+	return kv
+}
+
+// 从上下文中获取Jump接口
+func getIJump(c *Context) IJump {
+	var boolean bool
+	value, boolean := c.Get("__jump__")
+	if !boolean {
+		return nil
+	}
+	jump, boolean := value.(IJump)
+	if !boolean {
+		return nil
+	}
+	return jump
+}
+
+// 从上下文中获取View接口
+func getIView(c *Context) IView {
+	var boolean bool
+	value, boolean := c.Get("__view__")
+	if !boolean {
+		return nil
+	}
+	view, boolean := value.(IView)
+	if !boolean {
+		return nil
+	}
+	return view
+}
+
+// Jump接口
+
+func (c *Context) Suces(args ...any) {
+	jump := getIJump(c)
+	if jump == nil {
+		return
+	}
+	jump.Success(c, args...)
+}
+
+func (c *Context) Eror(args ...any) {
+	jump := getIJump(c)
+	if jump == nil {
+		return
+	}
+	jump.Error(c, args...)
+}
+
+func (c *Context) Result(data any, code int, msg string, types string, header map[string]string) {
+	jump := getIJump(c)
+	if jump == nil {
+		return
+	}
+	jump.Result(c, data, code, msg, types, header)
+}
+
+func (c *Context) Redirect301(url string, params map[string]string, code int, with map[string]string) {
+	jump := getIJump(c)
+	if jump == nil {
+		return
+	}
+	jump.Redirect(c, url, params, code, with)
+}
+
+func (c *Context) GetResponseType() string {
+	jump := getIJump(c)
+	if jump == nil {
+		return ""
+	}
+	return jump.GetResponseType(c)
+}
+
+// View接口
+
+/*Fetch
+ * 解析和获取模板内容 用于输出
+ * @param string    $template 模板文件名或者内容
+ * @param array     $vars     模板输出变量
+ */
+func (c *Context) Fetch(args ...any) {
+	view := getIView(c)
+	if view == nil {
+		templ, vars := fetchFunc(c, args...)
+		c.HTML(http.StatusOK, templ, (H)(vars))
+		return
+	}
+	view.Fetch(c, args...)
+}
+
+func (c *Context) FetchFunc(args ...any) (string, map[string]any) {
+	return fetchFunc(c, args...)
+}
+
+func fetchFunc(c *Context, args ...any) (string, map[string]any) {
+	vars := map[string]any{}
+	global := c.GetStringMap("__global__")
+	for k, v := range global {
+		vars[k] = v
+	}
+	temp := c.templete()
+	for i, arg := range args {
+		switch i {
+		case 0:
+			relativepath := arg.(string)
+			if relativepath == "" {
+				continue
+			}
+			if strings.HasPrefix(relativepath, "/") {
+				temp = relativepath
+			} else {
+				if !strings.HasPrefix(relativepath, ".") {
+					relativepath = "./" + relativepath
+				}
+				temp = filepath.Clean(temp + "/../" + relativepath)
+			}
+		case 1:
+			if val, ok := arg.(map[string]any); ok {
+				for k2, v2 := range val {
+					vars[k2] = v2
+				}
+			}
+		}
+	}
+	temp, _ = filepath.Rel("application/", temp)
+	temp = filepath.ToSlash(temp)
+	if filepath.Ext(temp) == "" {
+		temp += ".html"
+	}
+	return temp, vars
+}
+
+/*Assign
+ * 模板变量赋值
+ * @param mixed $name  变量名
+ * @param mixed $value 变量值
+ */
+func (c *Context) Assign(name string, args ...any) {
+	view := getIView(c)
+	if view == nil {
+		assignFunc(c, name, args...)
+		return
+	}
+	view.Assign(c, name, args...)
+}
+
+func AssignFunc(c *Context, name any, args ...any) {
+	assignFunc(c, name, args...)
+}
+
+func assignFunc(c *Context, name any, args ...any) {
+	global := c.GetStringMap("__global__")
+	if global == nil {
+		global = make(map[string]any)
+	}
+	switch n := name.(type) {
+	case string:
+		if len(args) > 0 {
+			global[n] = args[0]
+		}
+	default:
+		for k, v := range utils.Iterator(name) {
+			global[fmt.Sprintf("%s", k)] = v
+		}
+	}
+	c.Set("__global__", global)
+}
+
+func (c *Context) MergeAssign(vars map[string]any) H {
+	return mergeAssign(c, vars)
+}
+
+func mergeAssign(c *Context, vars map[string]any) H {
+	assignGlobal := c.GetStringMap("__global__")
+	for k, v := range assignGlobal {
+		if _, ok := vars[k]; !ok {
+			vars[k] = v
+		}
+	}
+	return H(vars)
+}
+
+func (c *Context) templete() string {
+	handlerName := c.GetString("__handler_name__")
+	var basepath string
+	if handlerName != "" {
+		fileArr := strings.Split(handlerName, "/")
+		lens := len(fileArr)
+		version := fileArr[lens-3]
+		module := fileArr[lens-2]
+		filego := strings.Split(fileArr[lens-1], ".")
+		lens2 := len(filego)
+		controller := filego[lens2-2]
+		action := filego[lens2-1]
+		basepath = utils.Camel2Snake(fmt.Sprintf("%s/%s/view/%s/%s.html", version, module, controller, action))
+	}
+	return basepath
+}

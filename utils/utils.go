@@ -10,6 +10,7 @@ import (
 	"hash"
 	"hash/adler32"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -254,4 +255,23 @@ func Ifor(condition any, param any, optional ...any) any {
 			return falseVal
 		}
 	}
+}
+
+// Iterator 将any类型转为map[any]any
+func Iterator(iter any) map[any]any {
+	ret := map[any]any{}
+	val := reflect.ValueOf(iter)
+	switch val.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < val.Len(); i++ {
+			ret[i] = val.Index(i).Interface()
+		}
+	case reflect.Map:
+		for i, k := range val.MapKeys() {
+			ret[i] = val.MapIndex(k).Interface()
+		}
+	default:
+	}
+
+	return ret
 }

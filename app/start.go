@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"gin"
-	_ "gin/annotation"
 	"gin/route"
 	"path/filepath"
 )

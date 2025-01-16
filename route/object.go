@@ -60,7 +60,7 @@ func (that *Version) GetModule(name string, filename string) *Module {
 			return v
 		}
 	}
-	absolutePath := strings.TrimSuffix(filename, filepath.Ext(filename))
+	absolutePath := filepath.Dir(strings.TrimSuffix(filename, filepath.Ext(filename)))
 	absolutePath, _ = filepath.Rel(osGetwd, absolutePath)
 	module := &Module{
 		Name:         name,
@@ -89,24 +89,16 @@ func (that *Module) Path() string {
 }
 
 type Controller struct {
-	IController
+	gin.IController
+	gin.IJump
+	gin.IView
 	Name    string //控制器名
 	Value   string //路由
 	Actions []*Action
 }
 
-type IController interface {
-	Initialize(*gin.Context)
-	Value() string
-	NoNeedLogin() []string
-	NoNeedRight() []string
-	ResponseType() string
-	BeforeAction() []gin.HandlerFunc
-	Exception() gin.HandlerFunc
-}
-
 func NewController(obj any) *Controller {
-	object, ok := obj.(IController)
+	object, ok := obj.(gin.IController)
 	if !ok {
 		return nil
 	}
@@ -119,7 +111,17 @@ func NewController(obj any) *Controller {
 	}
 
 	controller := &Controller{
-		object, typeOf.Name(), object.Value(), []*Action{},
+		IController: object,
+		Name:        typeOf.Name(),
+		Value:       object.Value(),
+		Actions:     []*Action{},
+	}
+	//后续挂在到上下文
+	if jump, isJump := obj.(gin.IJump); isJump {
+		controller.IJump = jump
+	}
+	if view, isView := obj.(gin.IView); isView {
+		controller.IView = view
 	}
 	//提取结构体中的方法
 	for i, lens := 0, valueOf.NumMethod(); i < lens; i++ {
@@ -136,6 +138,9 @@ func NewController(obj any) *Controller {
 }
 
 func (that *Controller) Path() string {
+	if that.Value != "" {
+		return utils.Camel2Snake(that.Value)
+	}
 	return utils.Camel2Snake(that.Name)
 }
 
