@@ -50,15 +50,19 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 		for _, module := range version.Modules {
 			level2 := level1.Group(module.Path())
 			for _, controller := range module.Controllers {
-				level3 := level2.Group(controller.Path())
+				var level3 *gin.RouterGroup
+				if strings.HasPrefix(controller.Path(), "/") {
+					level3 = engine.Group(controller.Path())
+				} else {
+					level3 = level2.Group(controller.Path())
+				}
 				//异常捕获 | 前置操作(多个)
 				handlersChain := append([]gin.HandlerFunc{controller.Exception()}, controller.BeforeAction()...)
-				handlersChain = append(handlersChain, controller.Initialize)
 				level3.Use(handlersChain...)
 
 				for _, action := range controller.Actions {
 					//方法的位置
-					handlerName := strings.Join([]string{module.AbsolutePath, controller.Name, action.Name}, ".")
+					handlerName := fmt.Sprintf("%s.%s.%s", module.AbsolutePath, controller.Name, action.Name)
 					level3.Use(func(c *gin.Context) {
 						c.Set("Request.URL", strings.Join([]string{module.Name, controller.Name, action.Name}, "/"))
 					})
@@ -69,12 +73,12 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 							httpMethods, uri := myfun(anno.Name, anno.Attributes)
 							if uri == "" {
 								uri = action.Path()
-								createURL(level3, httpMethods, uri, controller.Initialize, handlerName)
-							} else if strings.HasPrefix(uri, "/") {
-								absoluteGroup := engine.Group("")
-								absoluteGroup.Use(handlersChain...)
-								createURL(absoluteGroup, httpMethods, uri, controller.Initialize, handlerName)
 							}
+							if strings.HasPrefix(uri, "/") {
+								level3 = engine.Group("")
+								level3.Use(handlersChain...)
+							}
+							createURL(level3, httpMethods, uri, controller.Initialize, handlerName)
 							flag = true
 						}
 					}
@@ -91,11 +95,13 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 func createURL(group *gin.RouterGroup, httpMethods []string, url string, handler gin.HandlerFunc, handlerName string) {
 	for _, method := range httpMethods {
 		if method == "Any" {
-			group.Any(url).Use(handler)
+			group.Any(url, handler)
 			continue
 		}
-		group.Handle(method, url).Use(handler)
+		group.Handle(method, url, handler)
 	}
-	url = filepath.ToSlash(path.Clean(group.BasePath() + "/" + url))
-	fmt.Printf("[GIN-debug]  %-25s --> %s [ %s ]\n", url, handlerName, strings.Join(httpMethods, " "))
+	httpMethod := strings.Join(httpMethods, " ")
+	absolutePath := filepath.ToSlash(path.Clean(group.BasePath() + "/" + url))
+	nuHandlers := len(group.Handlers) + 1
+	fmt.Printf("[GIN-debug] %-10s %-25s --> %s (%d handlers)\n", httpMethod, absolutePath, handlerName, nuHandlers)
 }

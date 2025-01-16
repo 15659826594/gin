@@ -136,6 +136,9 @@ func NewController(obj any) *Controller {
 }
 
 func (that *Controller) Path() string {
+	if that.Value != "" {
+		return utils.Camel2Snake(that.Value)
+	}
 	return utils.Camel2Snake(that.Name)
 }
 
