@@ -35,7 +35,7 @@ var FuncMap = template.FuncMap{
 				language = arg
 			}
 		}
-		return lang.I18n(str, nil, language)
+		return lang.I18n(str, language)
 	},
 	"url": func(toUrl string, args ...any) string {
 		var base string

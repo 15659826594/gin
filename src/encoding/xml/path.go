@@ -12,7 +12,7 @@ import (
 /*
 A Path is a string that represents a search path through an etree starting
 from the document root or an arbitrary element. Paths are used with the
-Element object's Find* methods to locate and return desired elements.
+Element object's SearchSub* methods to locate and return desired elements.
 
 A Path consists of a series of slash-separated "selectors", each of which may
 be modified by one or more bracket-enclosed "filters". Selectors are used to

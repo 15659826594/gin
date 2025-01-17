@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -46,26 +47,23 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 	}
 
 	for _, version := range Router.Versions {
-		// http://localhost:8080/api/user/index 当版本为application时忽略模块
-		// http://localhost:8080/v2/api/user/index
+		// 当版本为application时忽略模块
 		level1 := engine.Group(version.Path())
 		for _, module := range version.Modules {
 			level2 := level1.Group(module.Path())
 			for _, controller := range module.Controllers {
 				var level3 *gin.RouterGroup
-				// http://localhost:8080/user/index  斜杠开头 , 忽略上级路由
 				if strings.HasPrefix(controller.Path(), "/") {
 					level3 = engine.Group(controller.Path())
 				} else {
 					level3 = level2.Group(controller.Path())
 				}
-				//异常捕获 | 前置操作(多个)
-				handlersChain := append([]gin.HandlerFunc{controller.Exception()}, controller.BeforeAction()...)
-				//将控制器的方法挂在到上下文
-				handlersChain = append(handlersChain, func(c *gin.Context) {
+				//异常捕获 | 控制器的方法挂在到上下文 | 前置操作(多个)
+				handlersChain := append([]gin.HandlerFunc{controller.Exception(), func(c *gin.Context) {
 					c.Set("__jump__", controller.IJump)
 					c.Set("__view__", controller.IView)
-				})
+				}}, controller.BeforeAction()...)
+
 				level3.Use(handlersChain...)
 
 				for _, action := range controller.Actions {
@@ -80,7 +78,6 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 							if uri == "" {
 								uri = action.Path()
 							}
-							// http://localhost:8080/index  斜杠开头 , 忽略上级路由
 							if strings.HasPrefix(uri, "/") {
 								tmpRG = engine.Group("")
 								tmpRG.Use(handlersChain...)
@@ -106,9 +103,9 @@ func createURL(group *gin.RouterGroup, httpMethods []string, url string, handler
 	}}, handler...)
 
 	for _, method := range httpMethods {
-		if method == "Any" {
+		if slices.Contains(httpMethods, "Any") {
 			group.Any(url, handlers...)
-			continue
+			break
 		}
 		group.Handle(method, url, handlers...)
 	}

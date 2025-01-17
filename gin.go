@@ -615,14 +615,14 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 		rPath = cleanPath(rPath)
 	}
 
-	// Find root of the tree for the given HTTP method
+	// SearchSub root of the tree for the given HTTP method
 	t := engine.trees
 	for i, tl := 0, len(t); i < tl; i++ {
 		if t[i].method != httpMethod {
 			continue
 		}
 		root := t[i].root
-		// Find route in tree
+		// SearchSub route in tree
 		value := root.getValue(rPath, c.params, c.skippedNodes, unescape)
 		if value.params != nil {
 			c.Params = *value.params
