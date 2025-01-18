@@ -16,7 +16,7 @@ func init() {
 	_ = Load(filepath.Clean(filename+"/../zh-cn.json"), "zh-cn")
 }
 
-var dictionary = NewDict()
+var Dictionary = NewDict()
 
 /*I18n 国际化翻译
  * @param string 			   	$name 字符串
@@ -28,7 +28,7 @@ func I18n(name string, lang string, args ...map[string]string) string {
 	if lang == "" {
 		lang = "zh-cn"
 	}
-	chains, err := dictChains(dictionary, splitDictName(lang))
+	chains, err := dictChains(Dictionary, splitDictName(lang))
 	if err != nil {
 		return ""
 	}
@@ -59,10 +59,10 @@ func Load(file string, dictName string) error {
 	if dictName == "" {
 		dictName = "zh-cn"
 	}
-	dict, err = dictionary.SearchSub(splitDictName(dictName))
+	dict, err = Dictionary.SearchSub(splitDictName(dictName))
 	if err != nil {
 		if err.Error() == "dict not found" {
-			dict, err = dictionary.CreateSub(splitDictName(dictName))
+			dict, err = Dictionary.CreateSub(splitDictName(dictName))
 		} else {
 			return err
 		}
