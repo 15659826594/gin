@@ -40,8 +40,8 @@ func Must(t *Template, err error) *Template {
 	return t
 }
 
-func ParseFolder(path string, rename func(path string) string) (*Template, error) {
-	return parseFolder(nil, path, rename)
+func ParseFolder(t *Template, path string, rename func(path string) string) (*Template, error) {
+	return parseFolder(t, path, rename)
 }
 
 func (t *Template) ParseFolder(path string, rename func(path string) string) (*Template, error) {

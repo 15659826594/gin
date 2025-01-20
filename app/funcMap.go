@@ -1,6 +1,7 @@
 package app
 
 import (
+	"gin"
 	"gin/config"
 	"gin/lang"
 	"gin/utils"
@@ -27,15 +28,22 @@ var FuncMap = template.FuncMap{
 	"bool": func(arg any) bool {
 		return !utils.Empty(arg)
 	},
-	"__": func(str string, args ...string) string {
+	"i18n": func(str string, args ...gin.H) string {
 		language := "zh-cn"
 		for index, arg := range args {
 			switch index {
 			case 0:
-				language = arg
+				if v1, o1 := arg["lang"]; o1 {
+					if v2, o2 := v1.(string); o2 {
+						language = v2
+					}
+				}
 			}
 		}
 		return lang.I18n(str, language)
+	},
+	"cdnurl": func(url string) string {
+		return url
 	},
 	"url": func(toUrl string, args ...any) string {
 		var base string

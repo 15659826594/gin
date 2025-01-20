@@ -53,58 +53,8 @@ func (engine *Engine) LoadHTMLFolder(path string, rename func(name string) strin
 }
 
 /************************************/
-/**********    context.go	 ********/
+/**********    requset.go	 ********/
 /************************************/
-
-func (c *Context) IsGet() bool {
-	return c.Request.Method == http.MethodGet
-}
-
-func (c *Context) IsPost() bool {
-	return c.Request.Method == http.MethodPost
-}
-
-func (c *Context) IsPut() bool {
-	return c.Request.Method == http.MethodPut
-}
-
-func (c *Context) IsDelete() bool {
-	return c.Request.Method == http.MethodDelete
-}
-
-func (c *Context) IsHead() bool {
-	return c.Request.Method == http.MethodHead
-}
-
-func (c *Context) IsPatch() bool {
-	return c.Request.Method == http.MethodPatch
-}
-
-func (c *Context) IsOptions() bool {
-	return c.Request.Method == http.MethodOptions
-}
-
-func (c *Context) IsAjax() bool {
-	return c.Request.Header.Get("X-Requested-With") == "XMLHttpRequest"
-}
-
-// Langset 当前的语言
-func (c *Context) Langset(withPath bool, args ...string) string {
-	language := "zh-cn"
-	for index, arg := range args {
-		switch index {
-		case 0:
-			language = arg
-		}
-	}
-	if withPath {
-		_, module, controller, action, err := separateHandlerName(c.GetString("__handler_name__"))
-		if err == nil {
-			return utils.Camel2Snake(strings.Join([]string{language, module, controller, action}, "."))
-		}
-	}
-	return language
-}
 
 type RequsetS struct {
 	context *Context
@@ -114,9 +64,59 @@ func (c *Context) Requests() *RequsetS {
 	return &RequsetS{context: c}
 }
 
+func (r *RequsetS) IsGet() bool {
+	return r.context.Request.Method == http.MethodGet
+}
+
+func (r *RequsetS) IsPost() bool {
+	return r.context.Request.Method == http.MethodPost
+}
+
+func (r *RequsetS) IsPut() bool {
+	return r.context.Request.Method == http.MethodPut
+}
+
+func (r *RequsetS) IsDelete() bool {
+	return r.context.Request.Method == http.MethodDelete
+}
+
+func (r *RequsetS) IsHead() bool {
+	return r.context.Request.Method == http.MethodHead
+}
+
+func (r *RequsetS) IsPatch() bool {
+	return r.context.Request.Method == http.MethodPatch
+}
+
+func (r *RequsetS) IsOptions() bool {
+	return r.context.Request.Method == http.MethodOptions
+}
+
+func (r *RequsetS) IsAjax() bool {
+	return r.context.Request.Header.Get("X-Requested-With") == "XMLHttpRequest"
+}
+
+// Langset 当前的语言
+func (r *RequsetS) Langset(withPath bool, args ...string) string {
+	language := "zh-cn"
+	for index, arg := range args {
+		switch index {
+		case 0:
+			language = arg
+		}
+	}
+	if withPath {
+		_, module, controller, action, err := separateHandlerName(r.context.GetString("__handler_name__"))
+		if err == nil {
+			return utils.Camel2Snake(strings.Join([]string{language, module, controller, action}, "."))
+		}
+	}
+	return language
+}
+
 // Module 获取当前的模块名
-func (c *RequsetS) Module(toSnake bool) string {
-	_, module, _, _, err := separateHandlerName(c.context.GetString("__handler_name__"))
+func (r *RequsetS) Module(toSnake bool) string {
+	_, module, _, _, err := separateHandlerName(r.context.GetString("__handler_name__"))
 	if err != nil {
 		return ""
 	}
@@ -127,8 +127,8 @@ func (c *RequsetS) Module(toSnake bool) string {
 }
 
 // Controller 获取当前的控制器名
-func (c *RequsetS) Controller(toSnake bool) string {
-	_, _, controller, _, err := separateHandlerName(c.context.GetString("__handler_name__"))
+func (r *RequsetS) Controller(toSnake bool) string {
+	_, _, controller, _, err := separateHandlerName(r.context.GetString("__handler_name__"))
 	if err != nil {
 		return ""
 	}
@@ -139,8 +139,8 @@ func (c *RequsetS) Controller(toSnake bool) string {
 }
 
 // Action 获取当前的操作名
-func (c *RequsetS) Action(toSnake bool) string {
-	_, _, _, action, err := separateHandlerName(c.context.GetString("__handler_name__"))
+func (r *RequsetS) Action(toSnake bool) string {
+	_, _, _, action, err := separateHandlerName(r.context.GetString("__handler_name__"))
 	if err != nil {
 		return ""
 	}
@@ -148,6 +148,24 @@ func (c *RequsetS) Action(toSnake bool) string {
 		return utils.Camel2Snake(action)
 	}
 	return action
+}
+
+func (r *RequsetS) Token(args ...string) string {
+	name := "__token__"
+	types := "md5"
+	for i, arg := range args {
+		switch i {
+		case 0:
+			if arg != "" {
+				name = arg
+			}
+		case 1:
+			if arg != "" {
+				types = arg
+			}
+		}
+	}
+	return name + types
 }
 
 func separateHandlerName(handlerName string) (version string, module string, controller string, action string, err error) {
@@ -167,8 +185,8 @@ func separateHandlerName(handlerName string) (version string, module string, con
 }
 
 // Server 获取server参数
-func (c *RequsetS) Server(name string, args ...string) string {
-	value := c.context.GetHeader(name)
+func (r *RequsetS) Server(name string, args ...string) string {
+	value := r.context.GetHeader(name)
 	if value != "" {
 		return value
 	}
@@ -179,12 +197,12 @@ func (c *RequsetS) Server(name string, args ...string) string {
 }
 
 // Request 获取Requests变量
-func (c *RequsetS) Request(name string, args ...string) string {
-	value := c.context.PostForm(name)
+func (r *RequsetS) Request(name string, args ...string) string {
+	value := r.context.PostForm(name)
 	if value != "" {
 		return value
 	}
-	value = c.context.Query(name)
+	value = r.context.Query(name)
 	if value != "" {
 		return value
 	}
@@ -195,16 +213,16 @@ func (c *RequsetS) Request(name string, args ...string) string {
 }
 
 // Post 获取post参数
-func (c *RequsetS) Post(name string, args ...string) string {
+func (r *RequsetS) Post(name string, args ...string) string {
 	if len(args) > 0 {
-		return c.context.DefaultPostForm(name, args[0])
+		return r.context.DefaultPostForm(name, args[0])
 	}
-	return c.context.PostForm(name)
+	return r.context.PostForm(name)
 }
 
 // Cookie 获取Cookie
-func (c *RequsetS) Cookie(name string) string {
-	if cookie, err := c.context.Request.Cookie(name); err == nil {
+func (r *RequsetS) Cookie(name string) string {
+	if cookie, err := r.context.Request.Cookie(name); err == nil {
 		return cookie.Value
 	}
 	return ""
@@ -216,14 +234,14 @@ func (c *RequsetS) Cookie(name string) string {
  * @param bool|string   $base base路径
  * @return string
  */
-func (c *RequsetS) Url(url string, vars any, base any) string {
+func (r *RequsetS) Url(url string, vars any, base any) string {
 	var baseUrl string
 	switch tmp := base.(type) {
 	case string:
 		baseUrl = tmp
 	case bool:
 		if tmp {
-			baseUrl = c.context.Request.URL.String()
+			baseUrl = r.context.Request.URL.String()
 		}
 	}
 	return utils.URL(url, vars, baseUrl)
@@ -489,4 +507,42 @@ func (c *Context) templete() string {
 		basepath = utils.Camel2Snake(fmt.Sprintf("%s/%s/view/%s/%s.html", version, module, controller, action))
 	}
 	return basepath
+}
+
+/************************************/
+/**********  	 auth.go 	 ********/
+/************************************/
+
+type IAuth interface {
+	GetUser()
+	Init(token string) bool
+	Register(username string, password string, email string, mobile string, extend []string) bool
+	Login(account string, password string) bool
+	Logout() bool
+	Changepwd(newpassword string, oldpassword string, ignoreoldpassword bool) bool
+	Direct(userId int) bool
+	Check(path string, args ...string) bool
+	IsLogin() bool
+	GetToken() string
+	GetUserinfo() map[string]any
+	GetRuleList()
+	GetRequestUri() string
+	SetRequestUri(uri string)
+	GetAllowFields() []string
+	SetAllowFields(fields []string)
+	Delete(userId int) bool
+	GetEncryptPassword(password string, salt string) string
+	Match(arr []string) bool
+	SetKeeptime(keeptime int64)
+	Render()
+	SetError(err string)
+	GetError() string
+}
+
+func (c *Context) Auth() IAuth {
+	if val, ok := c.Get("__auth__"); !ok {
+		return nil
+	} else {
+		return val.(IAuth)
+	}
 }
