@@ -167,39 +167,37 @@ func separateHandlerName(handlerName string) (version string, module string, con
 }
 
 // Server 获取server参数
-func (c *RequsetS) Server(name string, args ...string) string {
-	value := c.context.GetHeader(name)
-	if value != "" {
-		return value
-	}
-	if len(args) > 0 {
-		return args[0]
-	}
-	return ""
+func (c *RequsetS) Server(key string) string {
+	return c.context.GetHeader(key)
 }
 
-// Request 获取Requests变量
-func (c *RequsetS) Request(name string, args ...string) string {
-	value := c.context.PostForm(name)
+func (c *RequsetS) DefaultServer(key, defaultValue string) string {
+	value := c.context.GetHeader(key)
 	if value != "" {
 		return value
 	}
-	value = c.context.Query(name)
-	if value != "" {
-		return value
-	}
-	if len(args) > 0 {
-		return args[0]
-	}
-	return ""
+	return defaultValue
 }
 
-// Post 获取post参数
-func (c *RequsetS) Post(name string, args ...string) string {
-	if len(args) > 0 {
-		return c.context.DefaultPostForm(name, args[0])
+// Param 获取Requests变量
+func (c *RequsetS) Param(key string) string {
+	value := c.context.PostForm(key)
+	if value != "" {
+		return value
 	}
-	return c.context.PostForm(name)
+	return c.context.Query(key)
+}
+
+func (c *RequsetS) DefaultParam(key, defaultValue string) string {
+	value := c.context.PostForm(key)
+	if value != "" {
+		return value
+	}
+	value = c.context.Query(key)
+	if value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 // Cookie 获取Cookie

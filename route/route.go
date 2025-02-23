@@ -3,7 +3,6 @@ package route
 import (
 	"fmt"
 	"gin"
-	"gin/annotation"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -21,19 +20,19 @@ func Register(cStruct gin.IController) *Tree {
 	_, filename, _, _ := runtime.Caller(1)
 	module := Router.Module(filename)
 
-	astFile := parseFile(filename)
+	//astFile := parseFile(filename)
 
 	controller := NewController(cStruct)
 
 	//为方法绑定注解
-	if controller != nil {
-		for _, action := range controller.Actions {
-			comments, err := astFile.GetComments(controller.Name, action.Name)
-			if err == nil {
-				action.Annotations = comments
-			}
-		}
-	}
+	//if controller != nil {
+	//	for _, action := range controller.Actions {
+	//		comments, err := astFile.GetComments(controller.Name, action.Name)
+	//		if err == nil {
+	//			action.Annotations = comments
+	//		}
+	//	}
+	//}
 
 	module.Controllers = append(module.Controllers, controller)
 
@@ -69,26 +68,13 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 				for _, action := range controller.Actions {
 					//方法的位置
 					handlerName := fmt.Sprintf("%s.%s.%s", module.AbsolutePath, controller.Name, action.Name)
-					flag := false
-					for _, anno := range action.Annotations {
-						myfun := annotation.Get(anno.Name)
-						if myfun != nil {
-							tmpRG := level3
-							httpMethods, uri := myfun(anno.Name, anno.Attributes)
-							if uri == "" {
-								uri = action.Path()
-							}
-							if strings.HasPrefix(uri, "/") {
-								tmpRG = engine.Group("")
-								tmpRG.Use(handlersChain...)
-							}
-							createURL(tmpRG, httpMethods, uri, []gin.HandlerFunc{controller.Initialize, action.Handler}, handlerName)
-							flag = true
+					for _, relativePath := range action.Paths() {
+						tmpRG := level3
+						if strings.HasPrefix(relativePath, "/") {
+							tmpRG = engine.Group("")
+							tmpRG.Use(handlersChain...)
 						}
-					}
-					//如果没有路由注解则自动生成方法
-					if !flag {
-						createURL(level3, defaultMethod, action.Path(), []gin.HandlerFunc{controller.Initialize, action.Handler}, handlerName)
+						createURL(tmpRG, action.Methods(defaultMethod), relativePath, []gin.HandlerFunc{controller.Initialize, action.Handler}, handlerName)
 					}
 				}
 			}

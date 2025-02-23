@@ -11,7 +11,7 @@ var enum = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 func RequestMapping(httpMethod string, attr map[string]string) ([]string, string) {
 	var httpMethods []string
 
-	if httpMethod == "Request" {
+	if httpMethod == "Param" {
 		httpMethods = append(httpMethods, "Any")
 	} else {
 		httpMethods = append(httpMethods, strings.Split(httpMethod, ",")...)

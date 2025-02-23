@@ -126,14 +126,21 @@ func NewController(obj any) *Controller {
 	//提取结构体中的方法
 	for i, lens := 0, valueOf.NumMethod(); i < lens; i++ {
 		methodReflect := valueOf.Method(i)
-		if fn, isgc := methodReflect.Interface().(func(*gin.Context)); isgc {
+		if handlerFunc, ok := methodReflect.Interface().(func(*gin.Context)); ok {
 			controller.Actions = append(controller.Actions, &Action{
 				Name:    valueOf.Type().Method(i).Name,
-				Handler: fn,
+				Handler: handlerFunc,
+			})
+		} else if handler, ok := methodReflect.Interface().(func() (gin.HandlerFunc, string, string)); ok {
+			handlerFunc, path, method := handler()
+			controller.Actions = append(controller.Actions, &Action{
+				Name:    valueOf.Type().Method(i).Name,
+				Handler: handlerFunc,
+				paths:   strings.Split(path, ","),
+				methods: strings.Split(method, ","),
 			})
 		}
 	}
-
 	return controller
 }
 
@@ -145,17 +152,28 @@ func (that *Controller) Path() string {
 }
 
 type Action struct {
-	Name        string //方法名
-	Handler     gin.HandlerFunc
-	Annotations []Annotation
+	Name    string //方法名
+	Handler gin.HandlerFunc
+	paths   []string
+	methods []string
 }
 
-func (that *Action) Path() string {
-	return utils.Camel2Snake(that.Name)
+func (that *Action) Paths() []string {
+	if len(that.paths) > 0 {
+		return that.paths
+	}
+	return []string{utils.Camel2Snake(that.Name)}
 }
 
-type Annotation struct {
-	Name        string
-	Attributes  map[string]string
-	Description []string
+func (that *Action) Methods(defMethods []string) []string {
+	if len(that.methods) > 0 {
+		defMethods = that.methods
+	}
+	for i, s := range defMethods {
+		if strings.ToUpper(s) == "ANY" {
+			return []string{"Any"}
+		}
+		defMethods[i] = strings.ToUpper(s)
+	}
+	return defMethods
 }

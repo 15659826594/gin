@@ -16,7 +16,7 @@ func Get(name string) Handler {
 }
 
 func init() {
-	Register("Request", RequestMapping)
+	Register("Param", RequestMapping)
 	Register("Post", PostMapping)
 	Register("Get", GetMapping)
 	Register("Put", PutMapping)
