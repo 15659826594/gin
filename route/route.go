@@ -3,7 +3,6 @@ package route
 import (
 	"fmt"
 	"gin"
-	"gin/annotation"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -11,29 +10,27 @@ import (
 	"strings"
 )
 
+type IException interface {
+	Exception(*gin.Context)
+}
+type IInitialize interface {
+	Initialize(*gin.Context)
+}
+type IBeforeAction interface {
+	BeforeAction() []gin.HandlerFunc
+}
+
 var Router *Tree
 
 // Register 注册路由规则
-func Register(cStruct gin.IController) *Tree {
+func Register(cStruct any) *Tree {
 	if Router == nil {
 		Router = NewTree()
 	}
 	_, filename, _, _ := runtime.Caller(1)
 	module := Router.Module(filename)
 
-	astFile := parseFile(filename)
-
 	controller := NewController(cStruct)
-
-	//为方法绑定注解
-	if controller != nil {
-		for _, action := range controller.Actions {
-			comments, err := astFile.GetComments(controller.Name, action.Name)
-			if err == nil {
-				action.Annotations = comments
-			}
-		}
-	}
 
 	module.Controllers = append(module.Controllers, controller)
 
@@ -46,49 +43,51 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 		return
 	}
 
+	engine.Use(Abort())
+
 	for _, version := range Router.Versions {
 		// 当版本为application时忽略模块
-		level1 := engine.Group(version.Path())
+		verGroup := engine.Group(version.Path())
 		for _, module := range version.Modules {
-			level2 := level1.Group(module.Path())
+			modGroup := verGroup.Group(module.Path())
 			for _, controller := range module.Controllers {
-				var level3 *gin.RouterGroup
+				var conGroup *gin.RouterGroup
 				if strings.HasPrefix(controller.Path(), "/") {
-					level3 = engine.Group(controller.Path())
+					conGroup = engine.Group(controller.Path())
 				} else {
-					level3 = level2.Group(controller.Path())
+					conGroup = modGroup.Group(controller.Path())
 				}
-				//异常捕获 | 控制器的方法挂在到上下文 | 前置操作(多个)
-				handlersChain := append([]gin.HandlerFunc{controller.Exception(), func(c *gin.Context) {
-					c.Set("__jump__", controller.IJump)
-					c.Set("__view__", controller.IView)
-				}}, controller.BeforeAction()...)
-
-				level3.Use(handlersChain...)
+				//中间件链
+				var handlersChain []gin.HandlerFunc
+				//异常捕获
+				if initfunc, ok := controller.Raw.(IException); ok {
+					handlersChain = append(handlersChain, initfunc.Exception)
+				}
+				//将控制器上的方法挂载到上下文
+				handlersChain = append(handlersChain, mount(controller.Raw))
+				//前置操作
+				if initfunc, ok := controller.Raw.(IBeforeAction); ok {
+					handlersChain = append(handlersChain, initfunc.BeforeAction()...)
+				}
 
 				for _, action := range controller.Actions {
 					//方法的位置
 					handlerName := fmt.Sprintf("%s.%s.%s", module.AbsolutePath, controller.Name, action.Name)
-					flag := false
-					for _, anno := range action.Annotations {
-						myfun := annotation.Get(anno.Name)
-						if myfun != nil {
-							tmpRG := level3
-							httpMethods, uri := myfun(anno.Name, anno.Attributes)
-							if uri == "" {
-								uri = action.Path()
-							}
-							if strings.HasPrefix(uri, "/") {
-								tmpRG = engine.Group("")
-								tmpRG.Use(handlersChain...)
-							}
-							createURL(tmpRG, httpMethods, uri, []gin.HandlerFunc{controller.Initialize, action.Handler}, handlerName)
-							flag = true
+					for _, relativePath := range action.Paths() {
+						var chains = make([]gin.HandlerFunc, len(handlersChain))
+						copy(chains, handlersChain)
+						tmpGroup := conGroup
+						if strings.HasPrefix(relativePath, "/") {
+							tmpGroup = engine.Group("")
 						}
-					}
-					//如果没有路由注解则自动生成方法
-					if !flag {
-						createURL(level3, defaultMethod, action.Path(), []gin.HandlerFunc{controller.Initialize, action.Handler}, handlerName)
+						chains = append([]gin.HandlerFunc{func(c *gin.Context) {
+							c.SetHandlerName(handlerName)
+						}}, chains...)
+						//设置HandlerName -> 自定义异常处理 -> 控制器方法挂在到上下文 -> 控制器初始化方法 -> action方法
+						if initfunc, ok := controller.Raw.(IInitialize); ok {
+							chains = append(chains, initfunc.Initialize)
+						}
+						createURL(tmpGroup, action.Methods(defaultMethod), relativePath, append(chains, action.Handler), handlerName)
 					}
 				}
 			}
@@ -96,12 +95,7 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 	}
 }
 
-func createURL(group *gin.RouterGroup, httpMethods []string, url string, handler []gin.HandlerFunc, handlerName string) {
-	//执行顺序 设置handlerName, 控制器Init方法, action方法
-	handlers := append([]gin.HandlerFunc{func(c *gin.Context) {
-		c.Set("__handler_name__", handlerName)
-	}}, handler...)
-
+func createURL(group *gin.RouterGroup, httpMethods []string, url string, handlers []gin.HandlerFunc, handlerName string) {
 	for _, method := range httpMethods {
 		if slices.Contains(httpMethods, "Any") {
 			group.Any(url, handlers...)
@@ -110,9 +104,46 @@ func createURL(group *gin.RouterGroup, httpMethods []string, url string, handler
 		group.Handle(method, url, handlers...)
 	}
 	if gin.IsDebugging() {
-		httpMethod := strings.Join(httpMethods, " ")
 		absolutePath := filepath.ToSlash(path.Clean(group.BasePath() + "/" + url))
 		nuHandlers := len(group.Handlers) + len(handlers)
-		fmt.Printf("[GIN-debug] %-10s %-25s --> %s (%d handlers)\n", httpMethod, absolutePath, handlerName, nuHandlers)
+		fmt.Printf("[GIN-debug] %-10s %-25s --> %s (%d handlers)\n", strings.Join(httpMethods, " "), absolutePath, handlerName, nuHandlers)
+	}
+}
+
+func mount(obj any) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if fn, ok := obj.(gin.ISuccess); ok {
+			c.IController.ISuccess = fn
+		}
+		if fn, ok := obj.(gin.IFail); ok {
+			c.IController.IFail = fn
+		}
+		if fn, ok := obj.(gin.IResult); ok {
+			c.IController.IResult = fn
+		}
+		if fn, ok := obj.(gin.IResponseType); ok {
+			c.IController.IResponseType = fn
+		}
+		if fn, ok := obj.(gin.IAssign); ok {
+			c.IController.IAssign = fn
+		}
+		if fn, ok := obj.(gin.IFetch); ok {
+			c.IController.IFetch = fn
+		}
+	}
+}
+
+// Abort 中断, 不用每次都添加return
+func Abort() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			rec := recover()
+			if exc, ok := rec.(string); ok && exc == "Abort" {
+				c.Abort()
+			} else {
+				panic(rec)
+			}
+		}()
+		c.Next()
 	}
 }

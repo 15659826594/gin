@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gin-contrib/sse"
@@ -52,43 +51,43 @@ const abortIndex int8 = math.MaxInt8 >> 1
 
 // Context is the most important part of gin. It allows us to pass variables between middleware,
 // manage the flow, validate the JSON of a request and render a JSON response for example.
-type Context struct {
-	writermem responseWriter
-	Request   *http.Request
-	Writer    ResponseWriter
-
-	Params   Params
-	handlers HandlersChain
-	index    int8
-	fullPath string
-
-	engine       *Engine
-	params       *Params
-	skippedNodes *[]skippedNode
-
-	// This mutex protects Keys map.
-	mu sync.RWMutex
-
-	// Keys is a key/value pair exclusively for the context of each request.
-	Keys map[string]any
-
-	// Errors is a list of errors attached to all the handlers/middlewares who used this context.
-	Errors errorMsgs
-
-	// Accepted defines a list of manually accepted formats for content negotiation.
-	Accepted []string
-
-	// queryCache caches the query result from c.Request.URL.Query().
-	queryCache url.Values
-
-	// formCache caches c.Request.PostForm, which contains the parsed form data from POST, PATCH,
-	// or PUT body parameters.
-	formCache url.Values
-
-	// SameSite allows a server to define a cookie attribute making it impossible for
-	// the browser to send this cookie along with cross-site requests.
-	sameSite http.SameSite
-}
+//type Context struct {
+//	writermem responseWriter
+//	Request   *http.Request
+//	Writer    ResponseWriter
+//
+//	Params   Params
+//	handlers HandlersChain
+//	index    int8
+//	fullPath string
+//
+//	engine       *Engine
+//	params       *Params
+//	skippedNodes *[]skippedNode
+//
+//	// This mutex protects Keys map.
+//	mu sync.RWMutex
+//
+//	// Keys is a key/value pair exclusively for the context of each request.
+//	Keys map[string]any
+//
+//	// Errors is a list of errors attached to all the handlers/middlewares who used this context.
+//	Errors errorMsgs
+//
+//	// Accepted defines a list of manually accepted formats for content negotiation.
+//	Accepted []string
+//
+//	// queryCache caches the query result from c.Param.URL.Query().
+//	queryCache url.Values
+//
+//	// formCache caches c.Param.PostForm, which contains the parsed form data from POST, PATCH,
+//	// or PUT body parameters.
+//	formCache url.Values
+//
+//	// SameSite allows a server to define a cookie attribute making it impossible for
+//	// the browser to send this cookie along with cross-site requests.
+//	sameSite http.SameSite
+//}
 
 /************************************/
 /********** CONTEXT CREATION ********/
@@ -416,7 +415,7 @@ func (c *Context) AddParam(key, value string) {
 
 // Query returns the keyed url query value if it exists,
 // otherwise it returns an empty string `("")`.
-// It is shortcut for `c.Request.URL.Query().Get(key)`
+// It is shortcut for `c.Param.URL.Query().Get(key)`
 //
 //	    GET /path?id=1234&name=Manu&value=
 //		   c.Query("id") == "1234"
@@ -446,7 +445,7 @@ func (c *Context) DefaultQuery(key, defaultValue string) string {
 // GetQuery is like Query(), it returns the keyed url query value
 // if it exists `(value, true)` (even when the value is an empty string),
 // otherwise it returns `("", false)`.
-// It is shortcut for `c.Request.URL.Query().Get(key)`
+// It is shortcut for `c.Param.URL.Query().Get(key)`
 //
 //	GET /?name=Manu&lastname=
 //	("Manu", true) == c.GetQuery("name")
@@ -798,7 +797,7 @@ func (c *Context) ShouldBindBodyWithTOML(obj any) error {
 // It calls c.RemoteIP() under the hood, to check if the remote IP is a trusted proxy or not.
 // If it is it will then try to parse the headers defined in Engine.RemoteIPHeaders (defaulting to [X-Forwarded-For, X-Real-Ip]).
 // If the headers are not syntactically valid OR the remote IP does not correspond to a trusted proxy,
-// the remote IP (coming from Request.RemoteAddr) is returned.
+// the remote IP (coming from Param.RemoteAddr) is returned.
 func (c *Context) ClientIP() string {
 	// Check if we're running on a trusted platform, continue running backwards if error
 	if c.engine.TrustedPlatform != "" {
@@ -836,7 +835,7 @@ func (c *Context) ClientIP() string {
 	return remoteIP.String()
 }
 
-// RemoteIP parses the IP from Request.RemoteAddr, normalizes and returns the IP (without the port).
+// RemoteIP parses the IP from Param.RemoteAddr, normalizes and returns the IP (without the port).
 func (c *Context) RemoteIP() string {
 	ip, _, err := net.SplitHostPort(strings.TrimSpace(c.Request.RemoteAddr))
 	if err != nil {
@@ -1214,14 +1213,14 @@ func (c *Context) SetAccepted(formats ...string) {
 /***** GOLANG.ORG/X/NET/CONTEXT *****/
 /************************************/
 
-// hasRequestContext returns whether c.Request has Context and fallback.
+// hasRequestContext returns whether c.Param has Context and fallback.
 func (c *Context) hasRequestContext() bool {
 	hasFallback := c.engine != nil && c.engine.ContextWithFallback
 	hasRequestContext := c.Request != nil && c.Request.Context() != nil
 	return hasFallback && hasRequestContext
 }
 
-// Deadline returns that there is no deadline (ok==false) when c.Request has no Context.
+// Deadline returns that there is no deadline (ok==false) when c.Param has no Context.
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
 	if !c.hasRequestContext() {
 		return
@@ -1229,7 +1228,7 @@ func (c *Context) Deadline() (deadline time.Time, ok bool) {
 	return c.Request.Context().Deadline()
 }
 
-// Done returns nil (chan which will wait forever) when c.Request has no Context.
+// Done returns nil (chan which will wait forever) when c.Param has no Context.
 func (c *Context) Done() <-chan struct{} {
 	if !c.hasRequestContext() {
 		return nil
@@ -1237,7 +1236,7 @@ func (c *Context) Done() <-chan struct{} {
 	return c.Request.Context().Done()
 }
 
-// Err returns nil when c.Request has no Context.
+// Err returns nil when c.Param has no Context.
 func (c *Context) Err() error {
 	if !c.hasRequestContext() {
 		return nil

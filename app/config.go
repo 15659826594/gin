@@ -3,10 +3,12 @@ package app
 import (
 	"fastadmin/application"
 	"gin"
-	ginConfig "gin/config"
+	cfg "gin/config"
 	"gin/utils"
 	"html/template"
 	"reflect"
+	"strconv"
+	"time"
 )
 
 type TriState int
@@ -83,12 +85,17 @@ func NewConfig(config *Config) *Config {
 	for _, files := range def.ConfigFile {
 		if utils.IsDir(files) {
 			//载入配置
-			ginConfig.SearchFiles(files, func(file string, name string, args ...any) {
-				_ = ginConfig.Load(file, name, args...)
+			cfg.SearchFiles(files, func(file string, name string, args ...any) {
+				_ = cfg.Load(file, name, args...)
 			})
 		} else {
-			_ = ginConfig.Load(files, ginConfig.FileName(files))
+			_ = cfg.Load(files, cfg.FileName(files))
 		}
+	}
+
+	if boolean, ok := cfg.Get("app_debug").(bool); ok && !boolean {
+		// 如果是调试模式将version置为当前的时间戳可避免缓存
+		cfg.Set("site.version", strconv.FormatInt(time.Now().Unix(), 10))
 	}
 
 	return def

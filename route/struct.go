@@ -89,19 +89,17 @@ func (that *Module) Path() string {
 }
 
 type Controller struct {
-	gin.IController
-	gin.IJump
-	gin.IView
+	Raw     any
 	Name    string //控制器名
 	Value   string //路由
 	Actions []*Action
 }
 
+type IValue interface {
+	Value() string
+}
+
 func NewController(obj any) *Controller {
-	object, ok := obj.(gin.IController)
-	if !ok {
-		return nil
-	}
 	typeOf := reflect.TypeOf(obj)
 	valueOf := reflect.ValueOf(obj)
 
@@ -109,31 +107,49 @@ func NewController(obj any) *Controller {
 		typeOf = typeOf.Elem()
 		valueOf = valueOf.Elem()
 	}
+	var Value string
+	if fn, ok := obj.(IValue); ok {
+		Value = fn.Value()
+	}
 
 	controller := &Controller{
-		IController: object,
-		Name:        typeOf.Name(),
-		Value:       object.Value(),
-		Actions:     []*Action{},
-	}
-	//后续挂在到上下文
-	if jump, isJump := obj.(gin.IJump); isJump {
-		controller.IJump = jump
-	}
-	if view, isView := obj.(gin.IView); isView {
-		controller.IView = view
+		Raw:     obj,
+		Name:    typeOf.Name(),
+		Value:   Value,
+		Actions: []*Action{},
 	}
 	//提取结构体中的方法
 	for i, lens := 0, valueOf.NumMethod(); i < lens; i++ {
 		methodReflect := valueOf.Method(i)
-		if fn, isgc := methodReflect.Interface().(func(*gin.Context)); isgc {
+		if handlerFunc, ok := methodReflect.Interface().(func(*gin.Context)); ok {
 			controller.Actions = append(controller.Actions, &Action{
 				Name:    valueOf.Type().Method(i).Name,
-				Handler: fn,
+				Handler: handlerFunc,
+			})
+		} else if handler, ok := methodReflect.Interface().(func() (gin.HandlerFunc, string, string)); ok {
+			handlerFunc, path, method := handler()
+			var paths []string
+			var methods []string
+			if strings.TrimSpace(path) != "" {
+				paths = strings.Split(path, ",")
+			}
+			if strings.TrimSpace(method) != "" {
+				methods = strings.Split(method, ",")
+			}
+			for i, s := range methods {
+				if s == "Any" {
+					continue
+				}
+				methods[i] = strings.ToUpper(s)
+			}
+			controller.Actions = append(controller.Actions, &Action{
+				Name:    valueOf.Type().Method(i).Name,
+				Handler: handlerFunc,
+				paths:   paths,
+				methods: methods,
 			})
 		}
 	}
-
 	return controller
 }
 
@@ -145,17 +161,22 @@ func (that *Controller) Path() string {
 }
 
 type Action struct {
-	Name        string //方法名
-	Handler     gin.HandlerFunc
-	Annotations []Annotation
+	Name    string //方法名
+	Handler gin.HandlerFunc
+	paths   []string
+	methods []string
 }
 
-func (that *Action) Path() string {
-	return utils.Camel2Snake(that.Name)
+func (that *Action) Paths() []string {
+	if len(that.paths) > 0 {
+		return that.paths
+	}
+	return []string{utils.Camel2Snake(that.Name)}
 }
 
-type Annotation struct {
-	Name        string
-	Attributes  map[string]string
-	Description []string
+func (that *Action) Methods(defMethods []string) []string {
+	if len(that.methods) > 0 {
+		return that.methods
+	}
+	return defMethods
 }
