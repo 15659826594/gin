@@ -95,10 +95,6 @@ type Controller struct {
 	Actions []*Action
 }
 
-type IValue interface {
-	Value() string
-}
-
 func NewController(obj any) *Controller {
 	typeOf := reflect.TypeOf(obj)
 	valueOf := reflect.ValueOf(obj)
@@ -107,16 +103,16 @@ func NewController(obj any) *Controller {
 		typeOf = typeOf.Elem()
 		valueOf = valueOf.Elem()
 	}
-	var Value string
-	if fn, ok := obj.(IValue); ok {
-		Value = fn.Value()
-	}
 
 	controller := &Controller{
 		Raw:     obj,
 		Name:    typeOf.Name(),
-		Value:   Value,
+		Value:   valueOf.FieldByName("value").String(),
 		Actions: []*Action{},
+	}
+	var methods []string
+	if str := strings.TrimSpace(valueOf.FieldByName("method").String()); str != "" {
+		methods = strings.Split(str, ",")
 	}
 	//提取结构体中的方法
 	for i, lens := 0, valueOf.NumMethod(); i < lens; i++ {
@@ -125,16 +121,17 @@ func NewController(obj any) *Controller {
 			controller.Actions = append(controller.Actions, &Action{
 				Name:    valueOf.Type().Method(i).Name,
 				Handler: handlerFunc,
+				methods: methods,
 			})
 		} else if handler, ok := methodReflect.Interface().(func() (gin.HandlerFunc, string, string)); ok {
 			handlerFunc, path, method := handler()
 			var paths []string
 			var methods []string
-			if strings.TrimSpace(path) != "" {
-				paths = strings.Split(path, ",")
+			if str := strings.TrimSpace(path); str != "" {
+				paths = strings.Split(str, ",")
 			}
-			if strings.TrimSpace(method) != "" {
-				methods = strings.Split(method, ",")
+			if str := strings.TrimSpace(method); str != "" {
+				methods = strings.Split(str, ",")
 			}
 			for i, s := range methods {
 				if s == "Any" {

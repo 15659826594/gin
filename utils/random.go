@@ -14,7 +14,7 @@ import (
  * @return string
  */
 func RandomAlnum(len int) string {
-	return ""
+	return RandomBuild("alnum", 6)
 }
 
 /*RandomAlpha
@@ -24,7 +24,7 @@ func RandomAlnum(len int) string {
  * @return string
  */
 func RandomAlpha(len int) string {
-	return ""
+	return RandomBuild("alpha", 6)
 }
 
 /*RandomNumeric
@@ -44,7 +44,7 @@ func RandomNumeric(len int) string {
  * @return string
  */
 func RandomNozero(len int) string {
-	return ""
+	return RandomBuild("nozero", len)
 }
 
 /*RandomBuild 能用的随机数生成
@@ -62,12 +62,12 @@ func RandomBuild(types string, lens int) string {
 			pool = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		case "numeric":
 			pool = "0123456789"
-		case "nozero":
+		default:
 			pool = "123456789"
 		}
 		return Substr(StrShuffle(StrRepeat(pool, int(math.Ceil(float64(lens)/float64(len(pool)))))), 0, lens)
 	case "unique", "md5":
-		return "md5"
+		return Md5(types)
 	case "encrypt", "sha1":
 		return "encrypt"
 	}

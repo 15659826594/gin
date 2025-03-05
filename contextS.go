@@ -1,9 +1,11 @@
 package gin
 
 import (
+	"gin/utils"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -44,9 +46,9 @@ type IFetch interface {
 type IAuth interface {
 	GetUser() any
 	Init(string) bool
-	Register(string, string, string, string, map[string]string) bool
+	Register(string, string, string, string, map[string]any) bool
 	Login(string, string) bool
-	Logout()
+	Logout() bool
 	Changepwd(string, string, bool) bool
 	Direct(int) bool
 	Check(string, string) bool
@@ -60,10 +62,126 @@ type IAuth interface {
 	SetAllowFields([]string)
 	Delete(int) bool
 	GetEncryptPassword(string, string) string
-	Match() bool
-	Keeptime(int)
+	Match([]string) bool
+	Keeptime(int64)
 	SetError(error) IAuth
 	GetError() string
+}
+
+type RequestS struct {
+	ctx            *Context
+	method         string
+	HandlerName    string
+	modulename     string
+	controllername string
+	actionname     string
+}
+
+func (r *RequestS) Params() map[string]any {
+	arr := make(map[string]any)
+	query := r.ctx.Request.URL.Query()
+	for k, v := range query {
+		arr[k] = v
+	}
+	err := r.ctx.Request.ParseMultipartForm(32 << 20)
+	if err == nil {
+		postForm := r.ctx.Request.PostForm
+		for k, v := range postForm {
+			arr[k] = v
+		}
+	}
+	return arr
+}
+
+func (r *RequestS) Param(key string) (value string) {
+	if val, exist := r.Params()[key]; exist {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+func (r *RequestS) DefaultParam(key, defaultValue string) string {
+	if val, exist := r.Params()[key]; exist {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return defaultValue
+}
+
+func (r *RequestS) Module(snake bool) string {
+	s := r.modulename
+	if s == "" {
+		arr := strings.Split(r.HandlerName, "/")
+		if len(arr) >= 3 {
+			r.modulename = arr[2]
+		}
+		s = r.modulename
+	}
+	if snake {
+		return utils.Camel2Snake(s)
+	}
+	return s
+}
+
+func (r *RequestS) Controller(snake bool) string {
+	s := r.controllername
+	if s == "" {
+		arr := strings.Split(r.HandlerName, ".")
+		if len(arr) >= 2 {
+			r.controllername = arr[1]
+		}
+		s = r.controllername
+	}
+	if snake {
+		return utils.Camel2Snake(s)
+	}
+	return s
+}
+
+func (r *RequestS) Action(snake bool) string {
+	s := r.actionname
+	if s == "" {
+		arr := strings.Split(r.HandlerName, ".")
+		if len(arr) >= 3 {
+			r.actionname = arr[2]
+		}
+		s = r.actionname
+	}
+	if snake {
+		return utils.Camel2Snake(s)
+	}
+	return s
+}
+
+func (r *RequestS) IsGet() bool {
+	return r.method == http.MethodGet
+}
+
+func (r *RequestS) IsPost() bool {
+	return r.method == http.MethodPost
+}
+
+func (r *RequestS) IsPut() bool {
+	return r.method == http.MethodPut
+}
+
+func (r *RequestS) IsDelete() bool {
+	return r.method == http.MethodDelete
+}
+
+func (r *RequestS) IsHead() bool {
+	return r.method == http.MethodHead
+}
+
+func (r *RequestS) IsPatch() bool {
+	return r.method == http.MethodPatch
+}
+
+func (r *RequestS) IsOptions() bool {
+	return r.method == http.MethodOptions
 }
 
 // Context is the most important part of gin. It allows us to pass variables between middleware,
@@ -105,11 +223,11 @@ type Context struct {
 	// the browser to send this cookie along with cross-site requests.
 	sameSite http.SameSite
 
-	handlerName string
-
 	IController
 
 	Auth IAuth
+
+	RequestS
 }
 
 /*
@@ -117,7 +235,11 @@ SetHandlerName
 设置action句柄
 */
 func (c *Context) SetHandlerName(name string) {
-	c.handlerName = name
+	c.RequestS = RequestS{
+		ctx:         c,
+		method:      c.Request.Method,
+		HandlerName: name,
+	}
 }
 
 /*Success
@@ -137,22 +259,24 @@ func (c *Context) Success(args ...any) {
 	var data map[string]any
 	var header map[string]string
 	code := 1
-	for i, val := range args {
+	for i, arg := range args {
 		switch i {
 		case 0:
-			msg = val.(string)
+			msg = arg.(string)
 		case 1:
-			if v, ok := val.(H); ok {
+			if arg == nil {
+				continue
+			} else if v, ok := arg.(H); ok {
 				data = v
-			} else {
-				data = val.(map[string]any)
+			} else if v, ok := arg.(map[string]any); ok {
+				data = v
 			}
 		case 2:
-			code = val.(int)
+			code = arg.(int)
 		case 3:
-			types = val.(string)
+			types = arg.(string)
 		case 4:
-			header = val.(map[string]string)
+			header = arg.(map[string]string)
 		}
 	}
 	c.Result(data, code, msg, types, header)
@@ -175,22 +299,24 @@ func (c *Context) Fail(args ...any) {
 	var code int
 	var data map[string]any
 	var header map[string]string
-	for i, val := range args {
+	for i, arg := range args {
 		switch i {
 		case 0:
-			msg = val.(string)
+			msg = arg.(string)
 		case 1:
-			if v, ok := val.(H); ok {
+			if arg == nil {
+				continue
+			} else if v, ok := arg.(H); ok {
 				data = v
-			} else {
-				data = val.(map[string]any)
+			} else if v, ok := arg.(map[string]any); ok {
+				data = v
 			}
 		case 2:
-			code = val.(int)
+			code = arg.(int)
 		case 3:
-			types = val.(string)
+			types = arg.(string)
 		case 4:
-			header = val.(map[string]string)
+			header = arg.(map[string]string)
 		}
 	}
 	c.Result(data, code, msg, types, header)

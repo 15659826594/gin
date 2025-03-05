@@ -140,7 +140,7 @@ func Abort() gin.HandlerFunc {
 			rec := recover()
 			if exc, ok := rec.(string); ok && exc == "Abort" {
 				c.Abort()
-			} else {
+			} else if rec != nil {
 				panic(rec)
 			}
 		}()
