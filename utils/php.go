@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -14,7 +13,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 )
 
 type Comparable interface {
@@ -39,43 +37,6 @@ func ArrayRand(elements []any) []any {
 		n[i] = elements[v]
 	}
 	return n
-}
-
-// Implode implode()
-func Implode(glue string, pieces []string) string {
-	var buf bytes.Buffer
-	l := len(pieces)
-	for _, str := range pieces {
-		buf.WriteString(str)
-		if l--; l > 0 {
-			buf.WriteString(glue)
-		}
-	}
-	return buf.String()
-}
-
-// InArray in_array()
-// haystack supported _type: slice, array or map
-func InArray(needle any, haystack any) bool {
-	val := reflect.ValueOf(haystack)
-	switch val.Kind() {
-	case reflect.Slice, reflect.Array:
-		for i := 0; i < val.Len(); i++ {
-			if reflect.DeepEqual(needle, val.Index(i).Interface()) {
-				return true
-			}
-		}
-	case reflect.Map:
-		for _, k := range val.MapKeys() {
-			if reflect.DeepEqual(needle, val.MapIndex(k).Interface()) {
-				return true
-			}
-		}
-	default:
-		panic("haystack: haystack _type muset be slice, array or map")
-	}
-
-	return false
 }
 
 func MtRand(min, max int) int {
@@ -388,11 +349,6 @@ func Substr(str string, start uint, length int) string {
 	return str[start:end]
 }
 
-// StrRepeat str_repeat()
-func StrRepeat(input string, multiplier int) string {
-	return strings.Repeat(input, multiplier)
-}
-
 // StrShuffle str_shuffle()
 func StrShuffle(str string) string {
 	runes := []rune(str)
@@ -410,11 +366,6 @@ func Ltrim(str string, characterMask ...string) string {
 		return strings.TrimLeftFunc(str, unicode.IsSpace)
 	}
 	return strings.TrimLeft(str, characterMask[0])
-}
-
-// MbStrlen mb_strlen()
-func MbStrlen(str string) int {
-	return utf8.RuneCountInString(str)
 }
 
 // JsonEncode 用于对变量进行 JSON 编码，该函数如果执行成功返回 JSON 数据

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 )
 
 /*RandomAlnum
@@ -65,7 +66,7 @@ func RandomBuild(types string, lens int) string {
 		default:
 			pool = "123456789"
 		}
-		return Substr(StrShuffle(StrRepeat(pool, int(math.Ceil(float64(lens)/float64(len(pool)))))), 0, lens)
+		return Substr(StrShuffle(strings.Repeat(pool, int(math.Ceil(float64(lens)/float64(len(pool)))))), 0, lens)
 	case "unique", "md5":
 		return Md5(types)
 	case "encrypt", "sha1":

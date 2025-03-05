@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -188,7 +189,7 @@ func DateUnixtime(params ...any) (times int64) {
 	} else {
 		minute = now.Minute()
 	}
-	flag := InArray(position, []string{"begin", "start", "first", "front"})
+	flag := slices.Contains([]string{"begin", "start", "first", "front"}, position)
 	timeMonth := time.Month(month)
 	switch types {
 	case "minute":
