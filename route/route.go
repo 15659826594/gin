@@ -81,7 +81,7 @@ func Builder(engine *gin.Engine, defaultMethod []string) {
 							tmpGroup = engine.Group("")
 						}
 						chains = append([]gin.HandlerFunc{func(c *gin.Context) {
-							c.SetHandlerName(handlerName)
+							c.SetContextS(handlerName)
 						}}, chains...)
 						//设置HandlerName -> 自定义异常处理 -> 控制器方法挂在到上下文 -> 控制器初始化方法 -> action方法
 						if initfunc, ok := controller.Raw.(IInitialize); ok {

@@ -1,9 +1,11 @@
 package gin
 
 import (
+	"fmt"
 	"gin/utils"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -68,122 +70,6 @@ type IAuth interface {
 	GetError() string
 }
 
-type RequestS struct {
-	ctx            *Context
-	method         string
-	HandlerName    string
-	modulename     string
-	controllername string
-	actionname     string
-}
-
-func (r *RequestS) Params() map[string]any {
-	arr := make(map[string]any)
-	query := r.ctx.Request.URL.Query()
-	for k, v := range query {
-		arr[k] = v
-	}
-	err := r.ctx.Request.ParseMultipartForm(32 << 20)
-	if err == nil {
-		postForm := r.ctx.Request.PostForm
-		for k, v := range postForm {
-			arr[k] = v
-		}
-	}
-	return arr
-}
-
-func (r *RequestS) Param(key string) (value string) {
-	if val, exist := r.Params()[key]; exist {
-		if str, ok := val.(string); ok {
-			return str
-		}
-	}
-	return ""
-}
-
-func (r *RequestS) DefaultParam(key, defaultValue string) string {
-	if val, exist := r.Params()[key]; exist {
-		if str, ok := val.(string); ok {
-			return str
-		}
-	}
-	return defaultValue
-}
-
-func (r *RequestS) Module(snake bool) string {
-	s := r.modulename
-	if s == "" {
-		arr := strings.Split(r.HandlerName, "/")
-		if len(arr) >= 3 {
-			r.modulename = arr[2]
-		}
-		s = r.modulename
-	}
-	if snake {
-		return utils.Camel2Snake(s)
-	}
-	return s
-}
-
-func (r *RequestS) Controller(snake bool) string {
-	s := r.controllername
-	if s == "" {
-		arr := strings.Split(r.HandlerName, ".")
-		if len(arr) >= 2 {
-			r.controllername = arr[1]
-		}
-		s = r.controllername
-	}
-	if snake {
-		return utils.Camel2Snake(s)
-	}
-	return s
-}
-
-func (r *RequestS) Action(snake bool) string {
-	s := r.actionname
-	if s == "" {
-		arr := strings.Split(r.HandlerName, ".")
-		if len(arr) >= 3 {
-			r.actionname = arr[2]
-		}
-		s = r.actionname
-	}
-	if snake {
-		return utils.Camel2Snake(s)
-	}
-	return s
-}
-
-func (r *RequestS) IsGet() bool {
-	return r.method == http.MethodGet
-}
-
-func (r *RequestS) IsPost() bool {
-	return r.method == http.MethodPost
-}
-
-func (r *RequestS) IsPut() bool {
-	return r.method == http.MethodPut
-}
-
-func (r *RequestS) IsDelete() bool {
-	return r.method == http.MethodDelete
-}
-
-func (r *RequestS) IsHead() bool {
-	return r.method == http.MethodHead
-}
-
-func (r *RequestS) IsPatch() bool {
-	return r.method == http.MethodPatch
-}
-
-func (r *RequestS) IsOptions() bool {
-	return r.method == http.MethodOptions
-}
-
 // Context is the most important part of gin. It allows us to pass variables between middleware,
 // manage the flow, validate the JSON of a request and render a JSON response for example.
 type Context struct {
@@ -223,22 +109,150 @@ type Context struct {
 	// the browser to send this cookie along with cross-site requests.
 	sameSite http.SameSite
 
-	IController
-
 	Auth IAuth
 
-	RequestS
+	IController
+
+	*ContextS
 }
 
-/*
-SetHandlerName
-设置action句柄
-*/
-func (c *Context) SetHandlerName(name string) {
-	c.RequestS = RequestS{
-		ctx:         c,
-		method:      c.Request.Method,
-		HandlerName: name,
+type ContextS struct {
+	ctx            *Context
+	tmplDataMu     sync.RWMutex
+	tmplData       map[string]any
+	method         string
+	HandlerName    string
+	versionname    string
+	modulename     string
+	controllername string
+	actionname     string
+}
+
+func (r *ContextS) Params() map[string]any {
+	arr := make(map[string]any)
+	query := r.ctx.Request.URL.Query()
+	for k, v := range query {
+		arr[k] = v
+	}
+	err := r.ctx.Request.ParseMultipartForm(32 << 20)
+	if err == nil {
+		postForm := r.ctx.Request.PostForm
+		for k, v := range postForm {
+			arr[k] = v
+		}
+	}
+	return arr
+}
+
+func (r *ContextS) Param(key string) (value string) {
+	if val, exist := r.Params()[key]; exist {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+func (r *ContextS) DefaultParam(key, defaultValue string) string {
+	if val, exist := r.Params()[key]; exist {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return defaultValue
+}
+
+func (r *ContextS) Version() string {
+	if r.versionname == "application" {
+		return ""
+	}
+	return r.versionname
+}
+
+func (r *ContextS) Path() string {
+	return strings.TrimPrefix(fmt.Sprintf("%s/%s/%s/%s", r.Version(), r.Module(), r.Controller(), r.Action()), "/")
+}
+
+func (r *ContextS) Module() string {
+	return r.modulename
+}
+
+func (r *ContextS) Controller() string {
+	return r.controllername
+}
+
+func (r *ContextS) Action() string {
+	return r.actionname
+}
+
+func (r *ContextS) Langset(args ...string) string {
+	language := r.ctx.Request.Header.Get("Accept-Language")
+	if language == "" && len(args) > 0 {
+		return args[0]
+	}
+	return language
+}
+
+func (r *ContextS) Url(url string, vars any, base any) string {
+	var baseUrl string
+	switch tmp := base.(type) {
+	case string:
+		baseUrl = tmp
+	case bool:
+		if tmp {
+			baseUrl = r.ctx.Request.URL.String()
+		}
+	}
+	return utils.URL(url, vars, baseUrl)
+}
+
+func (r *ContextS) IsAjax() bool {
+	return r.ctx.Request.Header.Get("X-Requested-With") == "XMLHttpRequest"
+}
+
+func (r *ContextS) IsGet() bool {
+	return r.method == http.MethodGet
+}
+
+func (r *ContextS) IsPost() bool {
+	return r.method == http.MethodPost
+}
+
+func (r *ContextS) IsPut() bool {
+	return r.method == http.MethodPut
+}
+
+func (r *ContextS) IsDelete() bool {
+	return r.method == http.MethodDelete
+}
+
+func (r *ContextS) IsHead() bool {
+	return r.method == http.MethodHead
+}
+
+func (r *ContextS) IsPatch() bool {
+	return r.method == http.MethodPatch
+}
+
+func (r *ContextS) IsOptions() bool {
+	return r.method == http.MethodOptions
+}
+
+// SetContextS 设置action句柄
+func (c *Context) SetContextS(HandlerName string) {
+	arr := strings.Split(filepath.ToSlash(utils.Camel2Snake(HandlerName)), "/")
+	l := len(arr)
+	arr = append(arr[:l-1], strings.Split(arr[l-1], ".")[1:]...)
+	l = len(arr)
+	c.ContextS = &ContextS{
+		ctx:            c,
+		method:         c.Request.Method,
+		tmplData:       map[string]any{},
+		HandlerName:    HandlerName,
+		versionname:    arr[1],
+		modulename:     arr[2],
+		controllername: arr[l-2],
+		actionname:     arr[l-1],
 	}
 }
 
@@ -255,14 +269,16 @@ func (c *Context) Success(args ...any) {
 		c.IController.Success(c, args...)
 		return
 	}
-	var msg, types string
+	var msg, _type string
 	var data map[string]any
 	var header map[string]string
 	code := 1
 	for i, arg := range args {
 		switch i {
 		case 0:
-			msg = arg.(string)
+			if val, ok := arg.(string); ok {
+				msg = val
+			}
 		case 1:
 			if arg == nil {
 				continue
@@ -272,14 +288,20 @@ func (c *Context) Success(args ...any) {
 				data = v
 			}
 		case 2:
-			code = arg.(int)
+			if val, ok := arg.(int); ok {
+				code = val
+			}
 		case 3:
-			types = arg.(string)
+			if val, ok := arg.(string); ok {
+				_type = val
+			}
 		case 4:
-			header = arg.(map[string]string)
+			if val, ok := arg.(map[string]string); ok {
+				header = val
+			}
 		}
 	}
-	c.Result(data, code, msg, types, header)
+	c.Result(data, code, msg, _type, header)
 }
 
 /*Fail
@@ -295,14 +317,16 @@ func (c *Context) Fail(args ...any) {
 		c.IController.Fail(c, args...)
 		return
 	}
-	var msg, types string
+	var msg, _type string
 	var code int
 	var data map[string]any
 	var header map[string]string
 	for i, arg := range args {
 		switch i {
 		case 0:
-			msg = arg.(string)
+			if val, ok := arg.(string); ok {
+				msg = val
+			}
 		case 1:
 			if arg == nil {
 				continue
@@ -312,14 +336,20 @@ func (c *Context) Fail(args ...any) {
 				data = v
 			}
 		case 2:
-			code = arg.(int)
+			if val, ok := arg.(int); ok {
+				code = val
+			}
 		case 3:
-			types = arg.(string)
+			if val, ok := arg.(string); ok {
+				_type = val
+			}
 		case 4:
-			header = arg.(map[string]string)
+			if val, ok := arg.(map[string]string); ok {
+				header = val
+			}
 		}
 	}
-	c.Result(data, code, msg, types, header)
+	c.Result(data, code, msg, _type, header)
 }
 
 /*Result
@@ -333,10 +363,13 @@ func (c *Context) Fail(args ...any) {
  * @return void
  * @throws HttpResponseException
  */
-func (c *Context) Result(data any, code int, msg string, types string, header map[string]string) {
+func (c *Context) Result(data any, code int, msg string, _type string, header map[string]string) {
 	if c.IController.IResult != nil {
-		c.IController.Result(c, data, code, msg, types, header)
+		c.IController.Result(c, data, code, msg, _type, header)
 		return
+	}
+	if header == nil {
+		header = make(map[string]string)
 	}
 
 	var statuscode int
@@ -347,10 +380,9 @@ func (c *Context) Result(data any, code int, msg string, types string, header ma
 		"data": data,
 	}
 	// 如果未设置类型则使用默认类型判断
-	if types == "" && c.IController.IResponseType != nil {
-		types = c.IController.ResponseType(c)
+	if _type == "" && c.IController.IResponseType != nil {
+		_type = c.IController.ResponseType(c)
 	}
-
 	if sc, ok := header["statuscode"]; ok {
 		statuscode, _ = strconv.Atoi(sc)
 	} else {
@@ -364,7 +396,7 @@ func (c *Context) Result(data any, code int, msg string, types string, header ma
 	for key, val := range header {
 		c.Header(key, val)
 	}
-	switch types {
+	switch _type {
 	case "json":
 		c.JSON(statuscode, result)
 	case "jsonp":
@@ -376,5 +408,89 @@ func (c *Context) Result(data any, code int, msg string, types string, header ma
 	default:
 		c.JSON(statuscode, result)
 	}
+	panic("Abort")
+}
+
+/*Assign
+ * 模板变量赋值
+ * @access protected
+ * @param  mixed $name  要显示的模板变量
+ * @param  mixed $value 变量的值
+ * @return $this
+ */
+func (c *Context) Assign(name string, value any) *Context {
+	c.tmplDataMu.Lock()
+	defer c.tmplDataMu.Unlock()
+	c.tmplData[name] = value
+	return c
+}
+
+/*Fetch
+ * 解析和获取模板内容 用于输出
+ * @param string    $template 模板文件名或者内容
+ * @param array     $vars     模板输出变量
+ * @param array     $replace 替换内容
+ * @param array     $config     模板参数
+ * @param bool      $renderContent     是否渲染内容
+ * @return string
+ * @throws Exception
+ */
+func (c *Context) Fetch(args ...any) {
+	if c.IController.IFetch != nil {
+		c.IController.Fetch(c, args...)
+		return
+	}
+	var template = strings.TrimPrefix(fmt.Sprintf("%s/%s/view/%s/%s", c.Version(), c.Module(), c.Controller(), c.Action()), "/")
+	var vars H
+	//var replace = make(map[string]string)
+	//var config = make(map[string]any)
+	//var renderContent bool
+	for i, arg := range args {
+		switch i {
+		case 0:
+			if val, ok := arg.(string); ok {
+				if val == "" {
+					continue
+				} else if strings.HasPrefix(val, "/") {
+					template = val
+					continue
+				} else if !strings.HasPrefix(val, ".") {
+					val = "./" + val
+				}
+				template = filepath.Clean(template + "/../" + val)
+			}
+		case 1:
+			if arg == nil {
+				continue
+			} else if val, ok := arg.(H); ok {
+				vars = val
+			} else if val, ok := arg.(map[string]any); ok {
+				vars = val
+			}
+			//case 2:
+			//	if val, ok := arg.(map[string]string); ok {
+			//		replace = val
+			//	}
+			//case 3:
+			//	if val, ok := arg.(map[string]any); ok {
+			//		config = val
+			//	}
+			//case 4:
+			//	if val, ok := arg.(bool); ok {
+			//		renderContent = val
+			//	}
+		}
+	}
+	if filepath.Ext(template) == "" {
+		template += ".html"
+	}
+	//fmt.Println(replace, config, renderContent)
+	c.tmplData["Accept-Language"] = c.Langset()
+	c.tmplData["Request-Url"] = c.Path()
+	//Assign参数合并
+	for s, a := range vars {
+		c.tmplData[s] = a
+	}
+	c.HTML(http.StatusOK, strings.TrimPrefix(template, "/"), c.tmplData)
 	panic("Abort")
 }

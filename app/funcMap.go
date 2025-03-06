@@ -1,9 +1,7 @@
 package app
 
 import (
-	"gin"
 	"gin/config"
-	"gin/lang"
 	"gin/utils"
 	"html"
 	"html/template"
@@ -27,18 +25,6 @@ var FuncMap = template.FuncMap{
 	"ThinkConfig": config.Get,
 	"bool": func(arg any) bool {
 		return !utils.Empty(arg)
-	},
-	"i18n": func(str string, args ...gin.H) string {
-		language := "zh-cn"
-		for index, arg := range args {
-			switch index {
-			case 0:
-				if lang, ok := arg["lang"]; ok {
-					language = lang.(string)
-				}
-			}
-		}
-		return lang.I18n(str, language)
 	},
 	"cdnurl": func(str string) string {
 		return str

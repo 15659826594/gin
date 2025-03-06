@@ -8,12 +8,12 @@ package base64Captcha
 type DriverAudio struct {
 	// Length Default number of digits in captcha solution.
 	Length int
-	// Language possible values for lang are "en", "ja", "ru", "zh".
+	// Language possible values for lang are "zh-cn", "ja", "ru", "zh".
 	Language string
 }
 
 // DefaultDriverAudio is a default audio driver
-var DefaultDriverAudio = NewDriverAudio(6, "en")
+var DefaultDriverAudio = NewDriverAudio(6, "zh-cn")
 
 // NewDriverAudio creates a driver of audio
 func NewDriverAudio(length int, language string) *DriverAudio {
