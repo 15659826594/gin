@@ -333,9 +333,9 @@ func (c *Context) Fail(args ...any) {
  * @return void
  * @throws HttpResponseException
  */
-func (c *Context) Result(data any, code int, msg string, types string, header map[string]string) {
+func (c *Context) Result(data any, code int, msg string, _type string, header map[string]string) {
 	if c.IController.IResult != nil {
-		c.IController.Result(c, data, code, msg, types, header)
+		c.IController.Result(c, data, code, msg, _type, header)
 		return
 	}
 
@@ -347,8 +347,8 @@ func (c *Context) Result(data any, code int, msg string, types string, header ma
 		"data": data,
 	}
 	// 如果未设置类型则使用默认类型判断
-	if types == "" && c.IController.IResponseType != nil {
-		types = c.IController.ResponseType(c)
+	if _type == "" && c.IController.IResponseType != nil {
+		_type = c.IController.ResponseType(c)
 	}
 
 	if sc, ok := header["statuscode"]; ok {
@@ -364,7 +364,7 @@ func (c *Context) Result(data any, code int, msg string, types string, header ma
 	for key, val := range header {
 		c.Header(key, val)
 	}
-	switch types {
+	switch _type {
 	case "json":
 		c.JSON(statuscode, result)
 	case "jsonp":
