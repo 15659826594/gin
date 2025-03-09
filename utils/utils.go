@@ -74,17 +74,24 @@ func Camel2Snake(camel string) string {
 	return snake
 }
 
-// Snake2Camel 下划线转驼峰命名
-func Snake2Camel(s string) string {
+// Snake2Camel 下划线转驼峰命名(pascal 大驼峰)
+func Snake2Camel(s string, args ...bool) string {
+	if s == "" {
+		return s
+	}
+	pascal := false
+	if len(args) > 0 {
+		pascal = args[0]
+	}
 	re := regexp.MustCompile(`_([a-z])`)
 	snake := re.ReplaceAllStringFunc(s, func(m string) string {
 		return strings.ToUpper(m[1:])
 	})
-	// 小驼峰 (第一个单词小写)
-	if snake != "" {
-		snake = strings.ToLower(snake)
+	if !pascal { // 小驼峰 (第一个单词小写)
+		return strings.ToLower(snake)
+	} else { // 大驼峰 (第一个单词大写)
+		return strings.ToUpper(string(snake[0])) + snake[1:]
 	}
-	return snake
 }
 
 func HashHmac(algo string, data string, key string) string {

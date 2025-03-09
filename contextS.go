@@ -109,34 +109,34 @@ type Context struct {
 	// the browser to send this cookie along with cross-site requests.
 	sameSite http.SameSite
 
+	IController //来源于控制器
+
 	Auth IAuth
 
-	IController
-
-	*ContextS
+	*RequestS
 }
 
-type ContextS struct {
-	ctx            *Context
-	tmplDataMu     sync.RWMutex
-	tmplData       map[string]any
-	method         string
+type RequestS struct {
+	*Context
+	mu             sync.RWMutex
+	keys           map[string]any //通过assgin赋值
 	HandlerName    string
+	method         string
 	versionname    string
 	modulename     string
 	controllername string
 	actionname     string
 }
 
-func (r *ContextS) Params() map[string]any {
+func (r *RequestS) Params() map[string]any {
 	arr := make(map[string]any)
-	query := r.ctx.Request.URL.Query()
+	query := r.Request.URL.Query()
 	for k, v := range query {
 		arr[k] = v
 	}
-	err := r.ctx.Request.ParseMultipartForm(32 << 20)
+	err := r.Request.ParseMultipartForm(32 << 20)
 	if err == nil {
-		postForm := r.ctx.Request.PostForm
+		postForm := r.Request.PostForm
 		for k, v := range postForm {
 			arr[k] = v
 		}
@@ -144,7 +144,7 @@ func (r *ContextS) Params() map[string]any {
 	return arr
 }
 
-func (r *ContextS) Param(key string) (value string) {
+func (r *RequestS) Param(key string) (value string) {
 	if val, exist := r.Params()[key]; exist {
 		if str, ok := val.(string); ok {
 			return str
@@ -153,7 +153,7 @@ func (r *ContextS) Param(key string) (value string) {
 	return ""
 }
 
-func (r *ContextS) DefaultParam(key, defaultValue string) string {
+func (r *RequestS) DefaultParam(key, defaultValue string) string {
 	if val, exist := r.Params()[key]; exist {
 		if str, ok := val.(string); ok {
 			return str
@@ -162,79 +162,79 @@ func (r *ContextS) DefaultParam(key, defaultValue string) string {
 	return defaultValue
 }
 
-func (r *ContextS) Version() string {
+func (r *RequestS) Version() string {
 	if r.versionname == "application" {
 		return ""
 	}
 	return r.versionname
 }
 
-func (r *ContextS) Path() string {
+func (r *RequestS) Path() string {
 	return strings.TrimPrefix(fmt.Sprintf("%s/%s/%s/%s", r.Version(), r.Module(), r.Controller(), r.Action()), "/")
 }
 
-func (r *ContextS) Module() string {
+func (r *RequestS) Module() string {
 	return r.modulename
 }
 
-func (r *ContextS) Controller() string {
+func (r *RequestS) Controller() string {
 	return r.controllername
 }
 
-func (r *ContextS) Action() string {
+func (r *RequestS) Action() string {
 	return r.actionname
 }
 
-func (r *ContextS) Langset(args ...string) string {
-	language := r.ctx.Request.Header.Get("Accept-Language")
+func (r *RequestS) Langset(args ...string) string {
+	language := r.Request.Header.Get("Accept-Language")
 	if language == "" && len(args) > 0 {
 		return args[0]
 	}
 	return language
 }
 
-func (r *ContextS) Url(url string, vars any, base any) string {
+func (r *RequestS) Url(url string, vars any, base any) string {
 	var baseUrl string
 	switch tmp := base.(type) {
 	case string:
 		baseUrl = tmp
 	case bool:
 		if tmp {
-			baseUrl = r.ctx.Request.URL.String()
+			baseUrl = r.Request.URL.String()
 		}
 	}
 	return utils.URL(url, vars, baseUrl)
 }
 
-func (r *ContextS) IsAjax() bool {
-	return r.ctx.Request.Header.Get("X-Requested-With") == "XMLHttpRequest"
+func (r *RequestS) IsAjax() bool {
+	return r.Request.Header.Get("X-Requested-With") == "XMLHttpRequest"
 }
 
-func (r *ContextS) IsGet() bool {
+func (r *RequestS) IsGet() bool {
 	return r.method == http.MethodGet
 }
 
-func (r *ContextS) IsPost() bool {
+func (r *RequestS) IsPost() bool {
 	return r.method == http.MethodPost
 }
 
-func (r *ContextS) IsPut() bool {
+func (r *RequestS) IsPut() bool {
 	return r.method == http.MethodPut
 }
 
-func (r *ContextS) IsDelete() bool {
+func (r *RequestS) IsDelete() bool {
 	return r.method == http.MethodDelete
 }
 
-func (r *ContextS) IsHead() bool {
+func (r *RequestS) IsHead() bool {
 	return r.method == http.MethodHead
 }
 
-func (r *ContextS) IsPatch() bool {
+func (r *RequestS) IsPatch() bool {
 	return r.method == http.MethodPatch
 }
 
-func (r *ContextS) IsOptions() bool {
+func (r *RequestS) IsOptions() bool {
 	return r.method == http.MethodOptions
 }
 
@@ -244,11 +244,11 @@ func (c *Context) SetContextS(HandlerName string) {
 	l := len(arr)
 	arr = append(arr[:l-1], strings.Split(arr[l-1], ".")[1:]...)
 	l = len(arr)
-	c.ContextS = &ContextS{
-		ctx:            c,
-		method:         c.Request.Method,
-		tmplData:       map[string]any{},
+	c.RequestS = &RequestS{
+		Context:        c,
+		keys:           map[string]any{},
 		HandlerName:    HandlerName,
+		method:         c.Request.Method,
 		versionname:    arr[1],
 		modulename:     arr[2],
 		controllername: arr[l-2],
@@ -419,9 +419,9 @@ func (c *Context) Result(data any, code int, msg string, _type string, header ma
  * @return $this
  */
 func (c *Context) Assign(name string, value any) *Context {
-	c.tmplDataMu.Lock()
-	defer c.tmplDataMu.Unlock()
-	c.tmplData[name] = value
+	c.RequestS.mu.Lock()
+	defer c.RequestS.mu.Unlock()
+	c.RequestS.keys[name] = value
 	return c
 }
 
@@ -484,13 +484,13 @@ func (c *Context) Fetch(args ...any) {
 	if filepath.Ext(template) == "" {
 		template += ".html"
 	}
-	//fmt.Println(replace, config, renderContent)
-	c.tmplData["Accept-Language"] = c.Langset()
-	c.tmplData["Request-Url"] = c.Path()
-	//Assign参数合并
-	for s, a := range vars {
-		c.tmplData[s] = a
+	c.RequestS.mu.Lock()
+	c.RequestS.keys["Accept-Language"] = c.Langset()
+	c.RequestS.keys["Requests-Url"] = c.Path()
+	for s, a := range vars { //Assign参数合并
+		c.RequestS.keys[s] = a
 	}
-	c.HTML(http.StatusOK, strings.TrimPrefix(template, "/"), c.tmplData)
+	c.RequestS.mu.Unlock()
+	c.HTML(http.StatusOK, strings.TrimPrefix(template, "/"), c.RequestS.keys)
 	panic("Abort")
 }
