@@ -11,7 +11,6 @@ import (
 	"hash/adler32"
 	"net/url"
 	"reflect"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -67,31 +66,64 @@ func URL(toUrl string, vars any, base string) string {
 	return toURL.String()
 }
 
-// Camel2Snake 驼峰转下划线命名
-func Camel2Snake(camel string) string {
-	snake := regexp.MustCompile("([a-z0-9])([A-Z]+)").ReplaceAllString(camel, "${1}_${2}")
-	snake = strings.ToLower(snake)
-	return snake
+// CaseSnake 驼峰转下划线命名
+func CaseSnake(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
+
+	buf := make([]byte, 0, len(s)*2)
+	prevLower := false
+
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' {
+			if i > 0 && prevLower {
+				buf = append(buf, '_')
+			}
+			buf = append(buf, c+32) // ASCII码转小写
+			prevLower = false
+		} else {
+			if c == '_' && i > 0 && i < len(s)-1 {
+				next := s[i+1]
+				if next >= 'a' && next <= 'z' {
+					next -= 32
+				}
+			}
+			prevLower = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
+			buf = append(buf, c)
+		}
+	}
+	return string(buf)
 }
 
-// Snake2Camel 下划线转驼峰命名(pascal 大驼峰)
-func Snake2Camel(s string, args ...bool) string {
-	if s == "" {
-		return s
-	}
-	pascal := false
+// SnakeCase 下划线转驼峰命名(upperFirst 大驼峰)
+func SnakeCase(s string, args ...bool) string {
+	upperFirst := false
 	if len(args) > 0 {
-		pascal = args[0]
+		upperFirst = args[0]
 	}
-	re := regexp.MustCompile(`_([a-z])`)
-	snake := re.ReplaceAllStringFunc(s, func(m string) string {
-		return strings.ToUpper(m[1:])
-	})
-	if !pascal { // 小驼峰 (第一个单词小写)
-		return strings.ToLower(snake)
-	} else { // 大驼峰 (第一个单词大写)
-		return strings.ToUpper(string(snake[0])) + snake[1:]
+	buf := make([]byte, 0, len(s))
+	nextUpper := upperFirst
+
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == '_':
+			nextUpper = true
+		case nextUpper:
+			if i == 0 && c >= 'A' && c <= 'Z' {
+				c += 32
+			} else if c >= 'a' && c <= 'z' {
+				c -= 32 // ASCII码转大写
+			}
+			buf = append(buf, c)
+			nextUpper = false
+		default:
+			buf = append(buf, c)
+		}
 	}
+	return string(buf)
 }
 
 func HashHmac(algo string, data string, key string) string {

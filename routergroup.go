@@ -90,7 +90,7 @@ func (group *RouterGroup) handle(httpMethod, relativePath string, handlers Handl
 	return group.returnObj()
 }
 
-// ExceptionHandle registers a new request handle and middleware with the given path and method.
+// Handle registers a new request handle and middleware with the given path and method.
 // The last handler should be the real handler, the other ones should be middleware that can and should be shared among different routes.
 // See the example code in GitHub.
 //
@@ -107,37 +107,37 @@ func (group *RouterGroup) Handle(httpMethod, relativePath string, handlers ...Ha
 	return group.handle(httpMethod, relativePath, handlers)
 }
 
-// POST is a shortcut for router.ExceptionHandle("POST", path, handlers).
+// POST is a shortcut for router.Handle("POST", path, handlers).
 func (group *RouterGroup) POST(relativePath string, handlers ...HandlerFunc) IRoutes {
 	return group.handle(http.MethodPost, relativePath, handlers)
 }
 
-// GET is a shortcut for router.ExceptionHandle("GET", path, handlers).
+// GET is a shortcut for router.Handle("GET", path, handlers).
 func (group *RouterGroup) GET(relativePath string, handlers ...HandlerFunc) IRoutes {
 	return group.handle(http.MethodGet, relativePath, handlers)
 }
 
-// DELETE is a shortcut for router.ExceptionHandle("DELETE", path, handlers).
+// DELETE is a shortcut for router.Handle("DELETE", path, handlers).
 func (group *RouterGroup) DELETE(relativePath string, handlers ...HandlerFunc) IRoutes {
 	return group.handle(http.MethodDelete, relativePath, handlers)
 }
 
-// PATCH is a shortcut for router.ExceptionHandle("PATCH", path, handlers).
+// PATCH is a shortcut for router.Handle("PATCH", path, handlers).
 func (group *RouterGroup) PATCH(relativePath string, handlers ...HandlerFunc) IRoutes {
 	return group.handle(http.MethodPatch, relativePath, handlers)
 }
 
-// PUT is a shortcut for router.ExceptionHandle("PUT", path, handlers).
+// PUT is a shortcut for router.Handle("PUT", path, handlers).
 func (group *RouterGroup) PUT(relativePath string, handlers ...HandlerFunc) IRoutes {
 	return group.handle(http.MethodPut, relativePath, handlers)
 }
 
-// OPTIONS is a shortcut for router.ExceptionHandle("OPTIONS", path, handlers).
+// OPTIONS is a shortcut for router.Handle("OPTIONS", path, handlers).
 func (group *RouterGroup) OPTIONS(relativePath string, handlers ...HandlerFunc) IRoutes {
 	return group.handle(http.MethodOptions, relativePath, handlers)
 }
 
-// HEAD is a shortcut for router.ExceptionHandle("HEAD", path, handlers).
+// HEAD is a shortcut for router.Handle("HEAD", path, handlers).
 func (group *RouterGroup) HEAD(relativePath string, handlers ...HandlerFunc) IRoutes {
 	return group.handle(http.MethodHead, relativePath, handlers)
 }

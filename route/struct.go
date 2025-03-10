@@ -75,7 +75,7 @@ func (that *Version) Path() string {
 	if that.Name == "application" {
 		return ""
 	}
-	return utils.Camel2Snake(that.Name)
+	return utils.CaseSnake(that.Name)
 }
 
 type Module struct {
@@ -85,7 +85,7 @@ type Module struct {
 }
 
 func (that *Module) Path() string {
-	return utils.Camel2Snake(that.Name)
+	return utils.CaseSnake(that.Name)
 }
 
 type Controller struct {
@@ -152,9 +152,9 @@ func NewController(obj any) *Controller {
 
 func (that *Controller) Path() string {
 	if that.Value != "" {
-		return utils.Camel2Snake(that.Value)
+		return utils.CaseSnake(that.Value)
 	}
-	return utils.Camel2Snake(that.Name)
+	return utils.CaseSnake(that.Name)
 }
 
 type Action struct {
@@ -168,7 +168,7 @@ func (that *Action) Paths() []string {
 	if len(that.paths) > 0 {
 		return that.paths
 	}
-	return []string{utils.Camel2Snake(that.Name)}
+	return []string{utils.CaseSnake(that.Name)}
 }
 
 func (that *Action) Methods(defMethods []string) []string {

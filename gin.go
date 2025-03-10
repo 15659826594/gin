@@ -118,7 +118,7 @@ type Engine struct {
 	// ForwardedByClientIP if enabled, client IP will be parsed from the request's headers that
 	// match those stored at `(*gin.Engine).RemoteIPHeaders`. If no IP was
 	// fetched, it falls back to the IP obtained from
-	// `(*gin.Context).Param.RemoteAddr`.
+	// `(*gin.Context).Request.RemoteAddr`.
 	ForwardedByClientIP bool
 
 	// AppEngine was deprecated.
@@ -141,7 +141,7 @@ type Engine struct {
 
 	// RemoteIPHeaders list of headers used to obtain the client IP when
 	// `(*gin.Engine).ForwardedByClientIP` is `true` and
-	// `(*gin.Context).Param.RemoteAddr` is matched by at least one of the
+	// `(*gin.Context).Request.RemoteAddr` is matched by at least one of the
 	// network origins of list defined by `(*gin.Engine).SetTrustedProxies()`.
 	RemoteIPHeaders []string
 
@@ -156,7 +156,7 @@ type Engine struct {
 	// UseH2C enable h2c support.
 	UseH2C bool
 
-	// ContextWithFallback enable fallback Context.Deadline(), Context.Done(), Context.Err() and Context.Value() when Context.Param.Context() is not nil.
+	// ContextWithFallback enable fallback Context.Deadline(), Context.Done(), Context.Err() and Context.Value() when Context.Request.Context() is not nil.
 	ContextWithFallback bool
 
 	delims           render.Delims
@@ -592,7 +592,7 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 // HandleContext re-enters a context that has been rewritten.
-// This can be done by setting c.Param.URL.Path to your new target.
+// This can be done by setting c.Request.URL.Path to your new target.
 // Disclaimer: You can loop yourself to deal with this, use wisely.
 func (engine *Engine) HandleContext(c *Context) {
 	oldIndexValue := c.index
@@ -615,14 +615,14 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 		rPath = cleanPath(rPath)
 	}
 
-	// SearchSub root of the tree for the given HTTP method
+	// Find root of the tree for the given HTTP method
 	t := engine.trees
 	for i, tl := 0, len(t); i < tl; i++ {
 		if t[i].method != httpMethod {
 			continue
 		}
 		root := t[i].root
-		// SearchSub route in tree
+		// Find route in tree
 		value := root.getValue(rPath, c.params, c.skippedNodes, unescape)
 		if value.params != nil {
 			c.Params = *value.params

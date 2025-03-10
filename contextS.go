@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -128,38 +129,58 @@ type RequestS struct {
 	actionname     string
 }
 
-func (r *RequestS) Params() map[string]any {
-	arr := make(map[string]any)
-	query := r.Request.URL.Query()
-	for k, v := range query {
-		arr[k] = v
+func (r *RequestS) Arg(name string) string {
+	var args = map[string]any{}
+	for key, val := range r.Request.URL.Query() {
+		if len(val) == 1 {
+			args[key] = val[0]
+		} else {
+			args[key] = val
+		}
 	}
 	err := r.Request.ParseMultipartForm(32 << 20)
 	if err == nil {
 		postForm := r.Request.PostForm
-		for k, v := range postForm {
-			arr[k] = v
+		for key, val := range postForm {
+			if len(val) == 1 {
+				args[key] = val[0]
+			} else {
+				args[key] = val
+			}
 		}
 	}
-	return arr
+	if _, exist := args[name]; !exist {
+		return ""
+	}
+	if val, ok := args[name].(string); ok {
+		return val
+	} else if val, ok := args[name].([]string); ok {
+		return strings.Join(val, ",")
+	}
+	return "is : " + reflect.ValueOf(args[name]).Kind().String()
 }
 
-func (r *RequestS) Param(key string) (value string) {
-	if val, exist := r.Params()[key]; exist {
-		if str, ok := val.(string); ok {
-			return str
+func (r *RequestS) Args() map[string]any {
+	var args = map[string]any{}
+	for key, val := range r.Request.URL.Query() {
+		if len(val) == 1 {
+			args[key] = val[0]
+		} else {
+			args[key] = val
 		}
 	}
-	return ""
-}
-
-func (r *RequestS) DefaultParam(key, defaultValue string) string {
-	if val, exist := r.Params()[key]; exist {
-		if str, ok := val.(string); ok {
-			return str
+	err := r.Request.ParseMultipartForm(32 << 20)
+	if err == nil {
+		postForm := r.Request.PostForm
+		for key, val := range postForm {
+			if len(val) == 1 {
+				args[key] = val[0]
+			} else {
+				args[key] = val
+			}
 		}
 	}
-	return defaultValue
+	return args
 }
 
 func (r *RequestS) Version() string {
@@ -240,7 +261,7 @@ func (r *RequestS) IsOptions() bool {
 
 // SetContextS 设置action句柄
 func (c *Context) SetContextS(HandlerName string) {
-	arr := strings.Split(filepath.ToSlash(utils.Camel2Snake(HandlerName)), "/")
+	arr := strings.Split(filepath.ToSlash(utils.CaseSnake(HandlerName)), "/")
 	l := len(arr)
 	arr = append(arr[:l-1], strings.Split(arr[l-1], ".")[1:]...)
 	l = len(arr)
@@ -376,7 +397,7 @@ func (c *Context) Result(data any, code int, msg string, _type string, header ma
 	result := H{
 		"code": code,
 		"msg":  msg,
-		"time": time.Now().Unix(),
+		"time": strconv.FormatInt(time.Now().Unix(), 10),
 		"data": data,
 	}
 	// 如果未设置类型则使用默认类型判断

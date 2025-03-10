@@ -112,24 +112,12 @@ func createURL(group *gin.RouterGroup, httpMethods []string, url string, handler
 
 func mount(obj any) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if fn, ok := obj.(gin.ISuccess); ok {
-			c.IController.ISuccess = fn
-		}
-		if fn, ok := obj.(gin.IFail); ok {
-			c.IController.IFail = fn
-		}
-		if fn, ok := obj.(gin.IResult); ok {
-			c.IController.IResult = fn
-		}
-		if fn, ok := obj.(gin.IResponseType); ok {
-			c.IController.IResponseType = fn
-		}
-		if fn, ok := obj.(gin.IAssign); ok {
-			c.IController.IAssign = fn
-		}
-		if fn, ok := obj.(gin.IFetch); ok {
-			c.IController.IFetch = fn
-		}
+		c.IController.ISuccess, _ = obj.(gin.ISuccess)
+		c.IController.IFail, _ = obj.(gin.IFail)
+		c.IController.IResult, _ = obj.(gin.IResult)
+		c.IController.IResponseType, _ = obj.(gin.IResponseType)
+		c.IController.IAssign, _ = obj.(gin.IAssign)
+		c.IController.IFetch, _ = obj.(gin.IFetch)
 	}
 }
 

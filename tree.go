@@ -164,7 +164,7 @@ func (n *node) addRoute(path string, handlers HandlersChain) {
 
 walk:
 	for {
-		// SearchSub the longest common prefix.
+		// Find the longest common prefix.
 		// This also implies that the common prefix contains no ':' or '*'
 		// since the existing key can't contain those chars.
 		i := longestCommonPrefix(path, n.path)
@@ -268,14 +268,14 @@ walk:
 // Search for a wildcard segment and check the name for invalid characters.
 // Returns -1 as index, if no wildcard was found.
 func findWildcard(path string) (wildcard string, i int, valid bool) {
-	// SearchSub start
+	// Find start
 	for start, c := range []byte(path) {
 		// A wildcard starts with ':' (param) or '*' (catch-all)
 		if c != ':' && c != '*' {
 			continue
 		}
 
-		// SearchSub end and check for invalid characters
+		// Find end and check for invalid characters
 		valid = true
 		for end, c := range []byte(path[start+1:]) {
 			switch c {
@@ -292,7 +292,7 @@ func findWildcard(path string) (wildcard string, i int, valid bool) {
 
 func (n *node) insertChild(path string, fullPath string, handlers HandlersChain) {
 	for {
-		// SearchSub prefix until first wildcard
+		// Find prefix until first wildcard
 		wildcard, i, valid := findWildcard(path)
 		if i < 0 { // No wildcard found
 			break
@@ -484,7 +484,7 @@ walk: // Outer loop for walking the tree
 					return value
 				}
 
-				// ExceptionHandle wildcard child, which is always at the end of the array
+				// Handle wildcard child, which is always at the end of the array
 				n = n.children[len(n.children)-1]
 				globalParamsCount++
 
@@ -493,7 +493,7 @@ walk: // Outer loop for walking the tree
 					// fix truncate the parameter
 					// tree_test.go  line: 204
 
-					// SearchSub param end (either '/' or path end)
+					// Find param end (either '/' or path end)
 					end := 0
 					for end < len(path) && path[end] != '/' {
 						end++
@@ -766,7 +766,7 @@ walk: // Outer loop for walking the tree
 				// Process a new rune
 				var rv rune
 
-				// SearchSub rune start.
+				// Find rune start.
 				// Runes are up to 4 byte long,
 				// -4 would definitely be another rune.
 				var off int
@@ -831,7 +831,7 @@ walk: // Outer loop for walking the tree
 		n = n.children[0]
 		switch n.nType {
 		case param:
-			// SearchSub param end (either '/' or path end)
+			// Find param end (either '/' or path end)
 			end := 0
 			for end < len(path) && path[end] != '/' {
 				end++
