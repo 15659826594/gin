@@ -184,7 +184,7 @@ func (r *RequestS) Args() map[string]any {
 }
 
 func (r *RequestS) Version() string {
-	if r.versionname == "application" {
+	if r.versionname == "internal" {
 		return ""
 	}
 	return r.versionname

@@ -43,7 +43,7 @@ func (app *Application) Init() *Application {
 	// 在初始化时。即，在注册任何路由或路由器在套接字中侦听之前
 	// LoadHTMLFolder包含模板内的define
 	engine.LoadHTMLFolder(config.HTMLFolder, func(path string) string {
-		path, _ = filepath.Rel("application", path)
+		path, _ = filepath.Rel("internal", path)
 		return filepath.ToSlash(path)
 	})
 

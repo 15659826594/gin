@@ -67,8 +67,8 @@ func (group *RouterGroup) Use(middleware ...HandlerFunc) IRoutes {
 	return group.returnObj()
 }
 
-// Group creates a new router group. You should add all the routes that have common middlewares or the same path prefix.
-// For example, all the routes that use a common middleware for authorization could be grouped.
+// Group creates a new router group. You should add all the router that have common middlewares or the same path prefix.
+// For example, all the router that use a common middleware for authorization could be grouped.
 func (group *RouterGroup) Group(relativePath string, handlers ...HandlerFunc) *RouterGroup {
 	return &RouterGroup{
 		Handlers: group.combineHandlers(handlers),
@@ -91,7 +91,7 @@ func (group *RouterGroup) handle(httpMethod, relativePath string, handlers Handl
 }
 
 // Handle registers a new request handle and middleware with the given path and method.
-// The last handler should be the real handler, the other ones should be middleware that can and should be shared among different routes.
+// The last handler should be the real handler, the other ones should be middleware that can and should be shared among different router.
 // See the example code in GitHub.
 //
 // For GET, POST, PUT, PATCH and DELETE requests the respective shortcut

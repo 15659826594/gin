@@ -72,7 +72,7 @@ func (that *Version) GetModule(name string, filename string) *Module {
 }
 
 func (that *Version) Path() string {
-	if that.Name == "application" {
+	if that.Name == "internal" {
 		return ""
 	}
 	return utils.CaseSnake(that.Name)

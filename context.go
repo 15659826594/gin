@@ -161,7 +161,7 @@ func (c *Context) Handler() HandlerFunc {
 	return c.handlers.Last()
 }
 
-// FullPath returns a matched route full path. For not found routes
+// FullPath returns a matched route full path. For not found router
 // returns an empty string.
 //
 //	router.GET("/user/:id", func(c *gin.Context) {
@@ -209,7 +209,7 @@ func (c *Context) AbortWithStatus(code int) {
 
 // AbortWithStatusJSON calls `Abort()` and then `JSON` internally.
 // This method stops the chain, writes the status code and return a JSON body.
-// It also sets the Content-Type as "application/json".
+// It also sets the Content-Type as "internal/json".
 func (c *Context) AbortWithStatusJSON(code int, jsonObj any) {
 	c.Abort()
 	c.JSON(code, jsonObj)
@@ -630,10 +630,10 @@ func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dst string) error
 // Bind checks the Method and Content-Type to select a binding engine automatically,
 // Depending on the "Content-Type" header different bindings are used, for example:
 //
-//	"application/json" --> JSON binding
-//	"application/xml"  --> XML binding
+//	"internal/json" --> JSON binding
+//	"internal/xml"  --> XML binding
 //
-// It parses the request's body as JSON if Content-Type == "application/json" using JSON or XML as a JSON input.
+// It parses the request's body as JSON if Content-Type == "internal/json" using JSON or XML as a JSON input.
 // It decodes the json payload into the struct specified as a pointer.
 // It writes a 400 error and sets Content-Type header "text/plain" in the response if input is not valid.
 func (c *Context) Bind(obj any) error {
@@ -695,10 +695,10 @@ func (c *Context) MustBindWith(obj any, b binding.Binding) error {
 // ShouldBind checks the Method and Content-Type to select a binding engine automatically,
 // Depending on the "Content-Type" header different bindings are used, for example:
 //
-//	"application/json" --> JSON binding
-//	"application/xml"  --> XML binding
+//	"internal/json" --> JSON binding
+//	"internal/xml"  --> XML binding
 //
-// It parses the request's body as JSON if Content-Type == "application/json" using JSON or XML as a JSON input.
+// It parses the request's body as JSON if Content-Type == "internal/json" using JSON or XML as a JSON input.
 // It decodes the json payload into the struct specified as a pointer.
 // Like c.Bind() but this method does not set the response status code to 400 or abort if input is not valid.
 func (c *Context) ShouldBind(obj any) error {
@@ -972,7 +972,7 @@ func (c *Context) HTML(code int, name string, obj any) {
 }
 
 // IndentedJSON serializes the given struct as pretty JSON (indented + endlines) into the response body.
-// It also sets the Content-Type as "application/json".
+// It also sets the Content-Type as "internal/json".
 // WARNING: we recommend using this only for development purposes since printing pretty JSON is
 // more CPU and bandwidth consuming. Use Context.JSON() instead.
 func (c *Context) IndentedJSON(code int, obj any) {
@@ -981,14 +981,14 @@ func (c *Context) IndentedJSON(code int, obj any) {
 
 // SecureJSON serializes the given struct as Secure JSON into the response body.
 // Default prepends "while(1)," to response body if the given struct is array values.
-// It also sets the Content-Type as "application/json".
+// It also sets the Content-Type as "internal/json".
 func (c *Context) SecureJSON(code int, obj any) {
 	c.Render(code, render.SecureJSON{Prefix: c.engine.secureJSONPrefix, Data: obj})
 }
 
 // JSONP serializes the given struct as JSON into the response body.
 // It adds padding to response body to request data from a server residing in a different domain than the client.
-// It also sets the Content-Type as "application/javascript".
+// It also sets the Content-Type as "internal/javascript".
 func (c *Context) JSONP(code int, obj any) {
 	callback := c.DefaultQuery("callback", "")
 	if callback == "" {
@@ -999,13 +999,13 @@ func (c *Context) JSONP(code int, obj any) {
 }
 
 // JSON serializes the given struct as JSON into the response body.
-// It also sets the Content-Type as "application/json".
+// It also sets the Content-Type as "internal/json".
 func (c *Context) JSON(code int, obj any) {
 	c.Render(code, render.JSON{Data: obj})
 }
 
 // AsciiJSON serializes the given struct as JSON into the response body with unicode to ASCII string.
-// It also sets the Content-Type as "application/json".
+// It also sets the Content-Type as "internal/json".
 func (c *Context) AsciiJSON(code int, obj any) {
 	c.Render(code, render.AsciiJSON{Data: obj})
 }
@@ -1017,7 +1017,7 @@ func (c *Context) PureJSON(code int, obj any) {
 }
 
 // XML serializes the given struct as XML into the response body.
-// It also sets the Content-Type as "application/xml".
+// It also sets the Content-Type as "internal/xml".
 func (c *Context) XML(code int, obj any) {
 	c.Render(code, render.XML{Data: obj})
 }

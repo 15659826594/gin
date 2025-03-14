@@ -347,7 +347,7 @@ func (n *node) insertChild(path string, fullPath string, handlers HandlersChain)
 
 		// catchAll
 		if i+len(wildcard) != len(path) {
-			panic("catch-all routes are only allowed at the end of the path in path '" + fullPath + "'")
+			panic("catch-all router are only allowed at the end of the path in path '" + fullPath + "'")
 		}
 
 		if len(n.path) > 0 && n.path[len(n.path)-1] == '/' {

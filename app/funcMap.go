@@ -1,7 +1,6 @@
 package app
 
 import (
-	"gin/config"
 	"gin/utils"
 	"html"
 	"html/template"
@@ -22,7 +21,10 @@ var FuncMap = template.FuncMap{
 	"json_encode": utils.JsonEncode,
 	"json_decode": utils.JsonDecode,
 	"ifor":        utils.Ifor,
-	"ThinkConfig": config.Get,
+	//"ThinkConfig": pkgConfig.Get,
+	"ThinkConfig": func(str string) bool {
+		return true
+	},
 	"bool": func(arg any) bool {
 		return !utils.Empty(arg)
 	},

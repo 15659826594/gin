@@ -1,14 +1,10 @@
 package app
 
 import (
-	"fastadmin/application"
 	"gin"
-	cfg "gin/config"
 	"gin/utils"
 	"html/template"
 	"reflect"
-	"strconv"
-	"time"
 )
 
 type TriState int
@@ -57,11 +53,11 @@ func NewConfig(config *Config) *Config {
 		StaticFile: map[string]string{
 			"/favicon.ico": utils.Ternary(utils.FileExists("favicon.ico"), "favicon.ico", "public/assets/img/favicon.ico").(string),
 		},
-		ConfigFile:          []string{"application/extra"},
-		RouteRule:           application.Route,
-		NoRoute:             application.NoRoute,
+		ConfigFile: []string{"internal/extra"},
+		//RouteRule:           internal.Route,
+		//NoRoute:             internal.NoRoute,
 		Methods:             []string{"GET", "POST"},
-		HTMLFolder:          "application",
+		HTMLFolder:          "internal",
 		DisableConsoleColor: False,
 		FuncMap:             FuncMap,
 	}
@@ -82,21 +78,21 @@ func NewConfig(config *Config) *Config {
 		}
 	}
 
-	for _, files := range def.ConfigFile {
-		if utils.IsDir(files) {
-			//载入配置
-			cfg.SearchFiles(files, func(file string, name string, args ...any) {
-				_ = cfg.Load(file, name, args...)
-			})
-		} else {
-			_ = cfg.Load(files, cfg.FileName(files))
-		}
-	}
-
-	if boolean, ok := cfg.Get("app_debug").(bool); ok && !boolean {
-		// 如果是调试模式将version置为当前的时间戳可避免缓存
-		cfg.Set("site.version", strconv.FormatInt(time.Now().Unix(), 10))
-	}
+	//for _, files := range def.ConfigFile {
+	//	if utils.IsDir(files) {
+	//		//载入配置
+	//		cfg.SearchFiles(files, func(file string, name string, args ...any) {
+	//			_ = cfg.Load(file, name, args...)
+	//		})
+	//	} else {
+	//		_ = cfg.Load(files, cfg.FileName(files))
+	//	}
+	//}
+	//
+	//if boolean, ok := cfg.Get("app_debug").(bool); ok && !boolean {
+	//	// 如果是调试模式将version置为当前的时间戳可避免缓存
+	//	cfg.Set("site.version", strconv.FormatInt(time.Now().Unix(), 10))
+	//}
 
 	return def
 }

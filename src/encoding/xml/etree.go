@@ -193,7 +193,7 @@ func getIndentFunc(s *IndentSettings) indentFunc {
 	}
 }
 
-// Writer is the interface that wraps the Write* functions called by each token
+// Writer is the interface that wraps the Write* functions called by each Token
 // type's WriteTo function.
 type Writer interface {
 	io.StringWriter
@@ -235,7 +235,7 @@ type Element struct {
 	Attr       []Attr   // key-value attribute pairs
 	Child      []Token  // child tokens (elements, comments, etc.)
 	parent     *Element // parent element
-	index      int      // token index in parent's children
+	index      int      // Token index in parent's children
 }
 
 // An Attr represents a key-value attribute within an XML element.
@@ -701,17 +701,17 @@ func (e *Element) replaceText(i int, text string, flags charDataFlags) {
 	switch {
 	case end == i:
 		if text != "" {
-			// insert a new chardata token at index i
+			// insert a new chardata Token at index i
 			cd := newCharData(text, flags, nil)
 			e.InsertChildAt(i, cd)
 		}
 
 	case end == i+1:
 		if text == "" {
-			// remove the chardata token at index i
+			// remove the chardata Token at index i
 			e.RemoveChildAt(i)
 		} else {
-			// replace the first and only character token at index i
+			// replace the first and only character Token at index i
 			cd := e.Child[i].(*CharData)
 			cd.Data, cd.flags = text, flags
 		}
@@ -726,7 +726,7 @@ func (e *Element) replaceText(i int, text string, flags charDataFlags) {
 				e.Child[j].setIndex(j)
 			}
 		} else {
-			// replace the first chardata token at index i and remove all
+			// replace the first chardata Token at index i and remove all
 			// subsequent chardata tokens
 			cd := e.Child[i].(*CharData)
 			cd.Data, cd.flags = text, flags
@@ -740,8 +740,8 @@ func (e *Element) replaceText(i int, text string, flags charDataFlags) {
 	}
 }
 
-// findTermCharDataIndex finds the index of the first child token that isn't
-// a CharData token. It starts from the requested start index.
+// findTermCharDataIndex finds the index of the first child Token that isn't
+// a CharData Token. It starts from the requested start index.
 func (e *Element) findTermCharDataIndex(start int) int {
 	for i := start; i < len(e.Child); i++ {
 		if _, ok := e.Child[i].(*CharData); !ok {
@@ -752,14 +752,14 @@ func (e *Element) findTermCharDataIndex(start int) int {
 }
 
 // CreateElement creates a new element with the specified tag (i.e., name) and
-// adds it as the last child token of this element. The tag may include a
+// adds it as the last child Token of this element. The tag may include a
 // prefix followed by a colon.
 func (e *Element) CreateElement(tag string) *Element {
 	space, stag := spaceDecompose(tag)
 	return newElement(space, stag, e)
 }
 
-// AddChild adds the token 't' as the last child of the element. If token 't'
+// AddChild adds the Token 't' as the last child of the element. If Token 't'
 // was already the child of another element, it is first removed from its
 // parent element.
 func (e *Element) AddChild(t Token) {
@@ -769,10 +769,10 @@ func (e *Element) AddChild(t Token) {
 	e.addChild(t)
 }
 
-// InsertChild inserts the token 't' into this element's list of children just
-// before the element's existing child token 'ex'. If the existing element
+// InsertChild inserts the Token 't' into this element's list of children just
+// before the element's existing child Token 'ex'. If the existing element
 // 'ex' does not appear in this element's list of child tokens, then 't' is
-// added to the end of this element's list of child tokens. If token 't' is
+// added to the end of this element's list of child tokens. If Token 't' is
 // already the child of another element, it is first removed from the other
 // element's list of child tokens.
 //
@@ -799,9 +799,9 @@ func (e *Element) InsertChild(ex Token, t Token) {
 	}
 }
 
-// InsertChildAt inserts the token 't' into this element's list of child
+// InsertChildAt inserts the Token 't' into this element's list of child
 // tokens just before the requested 'index'. If the index is greater than or
-// equal to the length of the list of child tokens, then the token 't' is
+// equal to the length of the list of child tokens, then the Token 't' is
 // added to the end of the list of child tokens.
 func (e *Element) InsertChildAt(index int, t Token) {
 	if index >= len(e.Child) {
@@ -827,8 +827,8 @@ func (e *Element) InsertChildAt(index int, t Token) {
 	}
 }
 
-// RemoveChild attempts to remove the token 't' from this element's list of
-// child tokens. If the token 't' was a child of this element, then it is
+// RemoveChild attempts to remove the Token 't' from this element's list of
+// child tokens. If the Token 't' was a child of this element, then it is
 // removed and returned. Otherwise, nil is returned.
 func (e *Element) RemoveChild(t Token) Token {
 	if t.Parent() != e {
@@ -837,8 +837,8 @@ func (e *Element) RemoveChild(t Token) Token {
 	return e.RemoveChildAt(t.Index())
 }
 
-// RemoveChildAt removes the child token appearing in slot 'index' of this
-// element's list of child tokens. The removed child token is then returned.
+// RemoveChildAt removes the child Token appearing in slot 'index' of this
+// element's list of child tokens. The removed child Token is then returned.
 // If the index is out of bounds, no child is removed and nil is returned.
 func (e *Element) RemoveChildAt(index int) Token {
 	if index >= len(e.Child) {
@@ -855,7 +855,7 @@ func (e *Element) RemoveChildAt(index int) Token {
 	return t
 }
 
-// autoClose analyzes the stack's top element and the current token to decide
+// autoClose analyzes the stack's top element and the current Token to decide
 // whether the top element should be closed.
 func (e *Element) autoClose(stack *stack[*Element], t xml.Token, tags []string) {
 	if stack.empty() {
@@ -1353,17 +1353,17 @@ func (e *Element) WriteTo(w Writer, s *WriteSettings) {
 	}
 }
 
-// setParent replaces this element token's parent.
+// setParent replaces this element Token's parent.
 func (e *Element) setParent(parent *Element) {
 	e.parent = parent
 }
 
-// setIndex sets this element token's index within its parent's Child slice.
+// setIndex sets this element Token's index within its parent's Child slice.
 func (e *Element) setIndex(index int) {
 	e.index = index
 }
 
-// addChild adds a child token to the element e.
+// addChild adds a child Token to the element e.
 func (e *Element) addChild(t Token) {
 	t.setParent(e)
 	t.setIndex(len(e.Child))
@@ -1477,7 +1477,7 @@ func (a *Attr) WriteTo(w Writer, s *WriteSettings) {
 	}
 }
 
-// NewText creates an unparented CharData token containing simple text data.
+// NewText creates an unparented CharData Token containing simple text data.
 func NewText(text string) *CharData {
 	return newCharData(text, 0, nil)
 }
@@ -1488,7 +1488,7 @@ func NewCData(data string) *CharData {
 	return newCharData(data, cdataFlag, nil)
 }
 
-// NewCharData creates an unparented CharData token containing simple text
+// NewCharData creates an unparented CharData Token containing simple text
 // data.
 //
 // Deprecated: NewCharData is deprecated. Instead, use NewText, which does the
@@ -1497,8 +1497,8 @@ func NewCharData(data string) *CharData {
 	return newCharData(data, 0, nil)
 }
 
-// newCharData creates a character data token and binds it to a parent
-// element. If parent is nil, the CharData token remains unbound.
+// newCharData creates a character data Token and binds it to a parent
+// element. If parent is nil, the CharData Token remains unbound.
 func newCharData(data string, flags charDataFlags, parent *Element) *CharData {
 	c := &CharData{
 		Data:   data,
@@ -1512,20 +1512,20 @@ func newCharData(data string, flags charDataFlags, parent *Element) *CharData {
 	return c
 }
 
-// CreateText creates a CharData token containing simple text data and adds it
+// CreateText creates a CharData Token containing simple text data and adds it
 // to the end of this element's list of child tokens.
 func (e *Element) CreateText(text string) *CharData {
 	return newCharData(text, 0, e)
 }
 
-// CreateCData creates a CharData token containing a CDATA section with 'data'
+// CreateCData creates a CharData Token containing a CDATA section with 'data'
 // as its content and adds it to the end of this element's list of child
 // tokens.
 func (e *Element) CreateCData(data string) *CharData {
 	return newCharData(data, cdataFlag, e)
 }
 
-// CreateCharData creates a CharData token containing simple text data and
+// CreateCharData creates a CharData Token containing simple text data and
 // adds it to the end of this element's list of child tokens.
 //
 // Deprecated: CreateCharData is deprecated. Instead, use CreateText, which
@@ -1534,9 +1534,9 @@ func (e *Element) CreateCharData(data string) *CharData {
 	return e.CreateText(data)
 }
 
-// SetData modifies the content of the CharData token. In the case of a
-// CharData token containing simple text, the simple text is modified. In the
-// case of a CharData token containing a CDATA section, the CDATA section's
+// SetData modifies the content of the CharData Token. In the case of a
+// CharData Token containing simple text, the simple text is modified. In the
+// case of a CharData Token containing a CDATA section, the CDATA section's
 // content is modified.
 func (c *CharData) SetData(text string) {
 	c.Data = text
@@ -1547,25 +1547,25 @@ func (c *CharData) SetData(text string) {
 	}
 }
 
-// IsCData returns true if this CharData token is contains a CDATA section. It
-// returns false if the CharData token contains simple text.
+// IsCData returns true if this CharData Token is contains a CDATA section. It
+// returns false if the CharData Token contains simple text.
 func (c *CharData) IsCData() bool {
 	return (c.flags & cdataFlag) != 0
 }
 
-// IsWhitespace returns true if this CharData token contains only whitespace.
+// IsWhitespace returns true if this CharData Token contains only whitespace.
 func (c *CharData) IsWhitespace() bool {
 	return (c.flags & whitespaceFlag) != 0
 }
 
-// Parent returns this CharData token's parent element, or nil if it has no
+// Parent returns this CharData Token's parent element, or nil if it has no
 // parent.
 func (c *CharData) Parent() *Element {
 	return c.parent
 }
 
-// Index returns the index of this CharData token within its parent element's
-// list of child tokens. If this CharData token has no parent, then the
+// Index returns the index of this CharData Token within its parent element's
+// list of child tokens. If this CharData Token has no parent, then the
 // function returns -1.
 func (c *CharData) Index() int {
 	return c.index
@@ -1598,23 +1598,23 @@ func (c *CharData) dup(parent *Element) Token {
 	}
 }
 
-// setParent replaces the character data token's parent.
+// setParent replaces the character data Token's parent.
 func (c *CharData) setParent(parent *Element) {
 	c.parent = parent
 }
 
-// setIndex sets the CharData token's index within its parent element's Child
+// setIndex sets the CharData Token's index within its parent element's Child
 // slice.
 func (c *CharData) setIndex(index int) {
 	c.index = index
 }
 
-// NewComment creates an unparented comment token.
+// NewComment creates an unparented comment Token.
 func NewComment(comment string) *Comment {
 	return newComment(comment, nil)
 }
 
-// NewComment creates a comment token and sets its parent element to 'parent'.
+// NewComment creates a comment Token and sets its parent element to 'parent'.
 func newComment(comment string, parent *Element) *Comment {
 	c := &Comment{
 		Data:   comment,
@@ -1627,8 +1627,8 @@ func newComment(comment string, parent *Element) *Comment {
 	return c
 }
 
-// CreateComment creates a comment token using the specified 'comment' string
-// and adds it as the last child token of this element.
+// CreateComment creates a comment Token using the specified 'comment' string
+// and adds it as the last child Token of this element.
 func (e *Element) CreateComment(comment string) *Comment {
 	return newComment(comment, e)
 }
@@ -1642,13 +1642,13 @@ func (c *Comment) dup(parent *Element) Token {
 	}
 }
 
-// Parent returns comment token's parent element, or nil if it has no parent.
+// Parent returns comment Token's parent element, or nil if it has no parent.
 func (c *Comment) Parent() *Element {
 	return c.parent
 }
 
-// Index returns the index of this Comment token within its parent element's
-// list of child tokens. If this Comment token has no parent, then the
+// Index returns the index of this Comment Token within its parent element's
+// list of child tokens. If this Comment Token has no parent, then the
 // function returns -1.
 func (c *Comment) Index() int {
 	return c.index
@@ -1661,18 +1661,18 @@ func (c *Comment) WriteTo(w Writer, s *WriteSettings) {
 	w.WriteString("-->")
 }
 
-// setParent replaces the comment token's parent.
+// setParent replaces the comment Token's parent.
 func (c *Comment) setParent(parent *Element) {
 	c.parent = parent
 }
 
-// setIndex sets the Comment token's index within its parent element's Child
+// setIndex sets the Comment Token's index within its parent element's Child
 // slice.
 func (c *Comment) setIndex(index int) {
 	c.index = index
 }
 
-// NewDirective creates an unparented XML directive token.
+// NewDirective creates an unparented XML directive Token.
 func NewDirective(data string) *Directive {
 	return newDirective(data, nil)
 }
@@ -1691,8 +1691,8 @@ func newDirective(data string, parent *Element) *Directive {
 	return d
 }
 
-// CreateDirective creates an XML directive token with the specified 'data'
-// value and adds it as the last child token of this element.
+// CreateDirective creates an XML directive Token with the specified 'data'
+// value and adds it as the last child Token of this element.
 func (e *Element) CreateDirective(data string) *Directive {
 	return newDirective(data, e)
 }
@@ -1706,14 +1706,14 @@ func (d *Directive) dup(parent *Element) Token {
 	}
 }
 
-// Parent returns directive token's parent element, or nil if it has no
+// Parent returns directive Token's parent element, or nil if it has no
 // parent.
 func (d *Directive) Parent() *Element {
 	return d.parent
 }
 
-// Index returns the index of this Directive token within its parent element's
-// list of child tokens. If this Directive token has no parent, then the
+// Index returns the index of this Directive Token within its parent element's
+// list of child tokens. If this Directive Token has no parent, then the
 // function returns -1.
 func (d *Directive) Index() int {
 	return d.index
@@ -1726,12 +1726,12 @@ func (d *Directive) WriteTo(w Writer, s *WriteSettings) {
 	w.WriteString(">")
 }
 
-// setParent replaces the directive token's parent.
+// setParent replaces the directive Token's parent.
 func (d *Directive) setParent(parent *Element) {
 	d.parent = parent
 }
 
-// setIndex sets the Directive token's index within its parent element's Child
+// setIndex sets the Directive Token's index within its parent element's Child
 // slice.
 func (d *Directive) setIndex(index int) {
 	d.index = index
@@ -1757,9 +1757,9 @@ func newProcInst(target, inst string, parent *Element) *ProcInst {
 	return p
 }
 
-// CreateProcInst creates an XML processing instruction token with the
+// CreateProcInst creates an XML processing instruction Token with the
 // specified 'target' and instruction 'inst'. It is then added as the last
-// child token of this element.
+// child Token of this element.
 func (e *Element) CreateProcInst(target, inst string) *ProcInst {
 	return newProcInst(target, inst, e)
 }
@@ -1774,14 +1774,14 @@ func (p *ProcInst) dup(parent *Element) Token {
 	}
 }
 
-// Parent returns processing instruction token's parent element, or nil if it
+// Parent returns processing instruction Token's parent element, or nil if it
 // has no parent.
 func (p *ProcInst) Parent() *Element {
 	return p.parent
 }
 
-// Index returns the index of this ProcInst token within its parent element's
-// list of child tokens. If this ProcInst token has no parent, then the
+// Index returns the index of this ProcInst Token within its parent element's
+// list of child tokens. If this ProcInst Token has no parent, then the
 // function returns -1.
 func (p *ProcInst) Index() int {
 	return p.index
@@ -1798,12 +1798,12 @@ func (p *ProcInst) WriteTo(w Writer, s *WriteSettings) {
 	w.WriteString("?>")
 }
 
-// setParent replaces the processing instruction token's parent.
+// setParent replaces the processing instruction Token's parent.
 func (p *ProcInst) setParent(parent *Element) {
 	p.parent = parent
 }
 
-// setIndex sets the processing instruction token's index within its parent
+// setIndex sets the processing instruction Token's index within its parent
 // element's Child slice.
 func (p *ProcInst) setIndex(index int) {
 	p.index = index
